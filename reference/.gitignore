@@ -1,0 +1,10 @@
+# NEVER commit real credentials
+config.json
+state.json
+# generated output
+reports/
+Epitome_Results_Log.xlsx
+radar_*.png
+__pycache__/
+*.pyc
+.DS_Store

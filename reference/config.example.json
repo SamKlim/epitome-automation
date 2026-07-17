@@ -1,0 +1,20 @@
+{
+  "mode": "approve",
+  "owner_email": "merle@epitome-leadership.com",
+  "template_pdf": "Epitome_Fillable_Template.pdf",
+  "output_dir": "reports",
+  "log_file": "Epitome_Results_Log.xlsx",
+  "state_file": "state.json",
+  "surveymonkey": {
+    "access_token": "YOUR_SURVEYMONKEY_API_TOKEN",
+    "survey_id": "YOUR_SURVEY_ID"
+  },
+  "smtp": {
+    "host": "smtp.yourprovider.com",
+    "port": 587,
+    "username": "merle@epitome-leadership.com",
+    "password": "YOUR_EMAIL_PASSWORD_OR_APP_PASSWORD",
+    "from": "Merle Singer <merle@epitome-leadership.com>"
+  },
+  "client_subject": "Your Epitome Archetype Framework Results"
+}
