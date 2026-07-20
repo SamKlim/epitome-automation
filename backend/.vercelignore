@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env.local
+.env.*.local
+test
+.eslintrc.js
+jest.config.js
+tsconfig.spec.json
+src/**/*.spec.ts

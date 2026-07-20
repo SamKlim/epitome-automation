@@ -1,0 +1,386 @@
+[
+  {
+    "question_id": "288881566",
+    "question_number": 1,
+    "dimension": "Leading",
+    "question_text": "What do you draw on to lead your team to deliver the optimum results?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891718",
+        "position": 0,
+        "archetype": "Seductress",
+        "statement": "Determination, charisma, and an innate understanding of the organization's power structures"
+      },
+      {
+        "subquestion_id": "q_2018891719",
+        "position": 1,
+        "archetype": "Empress",
+        "statement": "An inspiring passion and intuitive understanding of individual and team dynamics"
+      },
+      {
+        "subquestion_id": "q_2018891720",
+        "position": 2,
+        "archetype": "Sovereign",
+        "statement": "The wisdom of my experience and an understanding of team dynamic"
+      },
+      {
+        "subquestion_id": "q_2018891724",
+        "position": 3,
+        "archetype": "Consort",
+        "statement": "The ability to amplify the reach of my boss and provide the behind the scenes insights"
+      }
+    ]
+  },
+  {
+    "question_id": "288881570",
+    "question_number": 2,
+    "dimension": "Trust",
+    "question_text": "What do you most trust when making decisions?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891746",
+        "position": 0,
+        "archetype": "Sovereign",
+        "statement": "Information, evidence, and the informed insights from others that I trust"
+      },
+      {
+        "subquestion_id": "q_2018891747",
+        "position": 1,
+        "archetype": "Empress",
+        "statement": "My instinct and gut in making sense of data and evidence and collaborating with others to assist me"
+      },
+      {
+        "subquestion_id": "q_2018891748",
+        "position": 2,
+        "archetype": "Seductress",
+        "statement": "My ability to understand the implications of information and which stakeholders need to be included in the decision-making process"
+      },
+      {
+        "subquestion_id": "q_2018891822",
+        "position": 3,
+        "archetype": "Consort",
+        "statement": "My network's strategic knowledge and my innate understanding of what they need to get the job done"
+      }
+    ]
+  },
+  {
+    "question_id": "288881571",
+    "question_number": 3,
+    "dimension": "Constraints",
+    "question_text": "What constrains me in work situations?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891753",
+        "position": 0,
+        "archetype": "Sovereign",
+        "statement": "Chaos where the ultimate decision makers are not willing to make clear, tough decisions"
+      },
+      {
+        "subquestion_id": "q_2018891823",
+        "position": 1,
+        "archetype": "Consort",
+        "statement": "Lack of access to corporate knowledge and being sidelined from the decision-making process"
+      },
+      {
+        "subquestion_id": "q_2018891754",
+        "position": 2,
+        "archetype": "Empress",
+        "statement": "Over-reliance on cold, hard facts with little nuanced understanding of the people impact"
+      },
+      {
+        "subquestion_id": "q_2018891755",
+        "position": 3,
+        "archetype": "Seductress",
+        "statement": "Lack of opportunity and an inability to have a visible and powerful impact"
+      }
+    ]
+  },
+  {
+    "question_id": "288881572",
+    "question_number": 4,
+    "dimension": "Inspiration",
+    "question_text": "What inspires me in a senior leader?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891762",
+        "position": 0,
+        "archetype": "Seductress",
+        "statement": "One that is powerful and has a magnetic vision and recognizes and celebrates my talent and ambition in driving results"
+      },
+      {
+        "subquestion_id": "q_2018891761",
+        "position": 1,
+        "archetype": "Consort",
+        "statement": "One that has a clear and captivating vision and recognizes and relies on my talents to execute on their strategy"
+      },
+      {
+        "subquestion_id": "q_2018891824",
+        "position": 2,
+        "archetype": "Sovereign",
+        "statement": "A compelling and strategic thinker who galvanises the team to execute with precision"
+      },
+      {
+        "subquestion_id": "q_2018891760",
+        "position": 3,
+        "archetype": "Empress",
+        "statement": "An inspirational and passionate big picture thinker who understands the power of the team to realise significant objectives"
+      }
+    ]
+  },
+  {
+    "question_id": "288881573",
+    "question_number": 5,
+    "dimension": "Managing Challenges",
+    "question_text": "As a leader, how do you manage challenges and setbacks?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891825",
+        "position": 0,
+        "archetype": "Sovereign",
+        "statement": "I focus on understanding the cause and systematically mitigate the challenge to set us up for success"
+      },
+      {
+        "subquestion_id": "q_2018891767",
+        "position": 1,
+        "archetype": "Empress",
+        "statement": "I rally the team to tackle the challenge and work together to ensure our success through innovative execution"
+      },
+      {
+        "subquestion_id": "q_2018891768",
+        "position": 2,
+        "archetype": "Consort",
+        "statement": "I figure out the key concerns that the leader has and work to address these to ensure a successful outcome"
+      },
+      {
+        "subquestion_id": "q_2018891769",
+        "position": 3,
+        "archetype": "Seductress",
+        "statement": "I clarify the reasons for the challenge, bolster the team where necessary, and double down on execution to ensure my success"
+      }
+    ]
+  },
+  {
+    "question_id": "288881574",
+    "question_number": 6,
+    "dimension": "Others View Me",
+    "question_text": "How do work colleagues describe you?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891774",
+        "position": 0,
+        "archetype": "Empress",
+        "statement": "As a passionate, inspiring and intuitive leader"
+      },
+      {
+        "subquestion_id": "q_2018891775",
+        "position": 1,
+        "archetype": "Seductress",
+        "statement": "As a charismatic, driven, and determined leader"
+      },
+      {
+        "subquestion_id": "q_2018891827",
+        "position": 2,
+        "archetype": "Sovereign",
+        "statement": "As a wise, calm, and natural leader"
+      },
+      {
+        "subquestion_id": "q_2018891826",
+        "position": 3,
+        "archetype": "Consort",
+        "statement": "As an influential, power behind the scenes and connected leader"
+      }
+    ]
+  },
+  {
+    "question_id": "288881575",
+    "question_number": 7,
+    "dimension": "Striving",
+    "question_text": "What do you strive for in your role?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891828",
+        "position": 0,
+        "archetype": "Empress",
+        "statement": "To bring together outstanding tight-knit teams with healthy cultures to deliver innovative, impactful results"
+      },
+      {
+        "subquestion_id": "q_2018891780",
+        "position": 1,
+        "archetype": "Sovereign",
+        "statement": "To build high performing teams that drive systemic, evidence-based, impactful outcomes"
+      },
+      {
+        "subquestion_id": "q_2018891781",
+        "position": 2,
+        "archetype": "Seductress",
+        "statement": "To be the best by using my ambition and talent to achieve strategic corporate goals"
+      },
+      {
+        "subquestion_id": "q_2018891782",
+        "position": 3,
+        "archetype": "Consort",
+        "statement": "To achieve the best outcome for my boss which bolster the organization's strategy and benefits its people"
+      }
+    ]
+  },
+  {
+    "question_id": "288881576",
+    "question_number": 8,
+    "dimension": "Working With Peers",
+    "question_text": "How do you behave when working with your peers?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891829",
+        "position": 0,
+        "archetype": "Sovereign",
+        "statement": "I lead with analytic clarity, experiential wisdom, and a deep awareness of the team dynamic and how to harness this"
+      },
+      {
+        "subquestion_id": "q_2018891789",
+        "position": 1,
+        "archetype": "Empress",
+        "statement": "I lead with passion, an inspiring narrative, and galvanize the team through a deep intuitive understanding of individual and team dynamics"
+      },
+      {
+        "subquestion_id": "q_2018891830",
+        "position": 2,
+        "archetype": "Seductress",
+        "statement": "I lead with charisma, the ability to influence and shape the team, and a single-minded determination to deliver"
+      },
+      {
+        "subquestion_id": "q_2018891790",
+        "position": 3,
+        "archetype": "Consort",
+        "statement": "I lead by presenting the objectives of the organization and the goals of my boss and engage the team to ensure execution is the focus"
+      }
+    ]
+  },
+  {
+    "question_id": "288881577",
+    "question_number": 9,
+    "dimension": "At Your Worst",
+    "question_text": "How would you describe yourself at your worst (under pressure / bored / unhappy)?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891797",
+        "position": 0,
+        "archetype": "Empress",
+        "statement": "Over-emotional, self-obsessed, easily enraged, scattered, cliquish, destructive, and hell-bent"
+      },
+      {
+        "subquestion_id": "q_2018891799",
+        "position": 1,
+        "archetype": "Sovereign",
+        "statement": "Cold, disdainful, intimidating, unforgiving, and overly reliant on hard facts"
+      },
+      {
+        "subquestion_id": "q_2018891798",
+        "position": 2,
+        "archetype": "Consort",
+        "statement": "Anxious, blinded by the loyalty to my boss, officious, dismissive, and passive aggressive"
+      },
+      {
+        "subquestion_id": "q_2018891831",
+        "position": 3,
+        "archetype": "Seductress",
+        "statement": "Manipulative, political, demanding, icy, envious, furious, and a win or die attitude"
+      }
+    ]
+  },
+  {
+    "question_id": "288881578",
+    "question_number": 10,
+    "dimension": "Confidence",
+    "question_text": "What gives you confidence when acting in a leadership role?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018891833",
+        "position": 0,
+        "archetype": "Sovereign",
+        "statement": "The belief in my capabilities, an understanding of the data, and a clear understanding of what needs to be achieved"
+      },
+      {
+        "subquestion_id": "q_2018891806",
+        "position": 1,
+        "archetype": "Seductress",
+        "statement": "My self-belief and appreciation of my talent and a determination to be the very best at whatever I put my mind to"
+      },
+      {
+        "subquestion_id": "q_2018891832",
+        "position": 2,
+        "archetype": "Empress",
+        "statement": "The deep, intuitive understanding of what is at play, the creative and innovative capabilities I have, and my passion to make it happen"
+      },
+      {
+        "subquestion_id": "q_2018891807",
+        "position": 3,
+        "archetype": "Consort",
+        "statement": "The trust and belief that my leader has in me and my innate abilities to translate their vision into an exceptional performance"
+      }
+    ]
+  },
+  {
+    "question_id": "288881654",
+    "question_number": 11,
+    "dimension": "Power",
+    "question_text": "How do you relate to power in your leadership role?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018892275",
+        "position": 0,
+        "archetype": "Empress",
+        "statement": "My power lives in my people. I am genuinely most powerful in a collective, and I build teams that are greater than the sum of their parts"
+      },
+      {
+        "subquestion_id": "q_2018892273",
+        "position": 1,
+        "archetype": "Sovereign",
+        "statement": "I hold power with quiet authority. I know I have it, I do not need to demonstrate it, and I use it to create clarity and direction for those around me"
+      },
+      {
+        "subquestion_id": "q_2018892276",
+        "position": 2,
+        "archetype": "Consort",
+        "statement": "My power is relational, it flows from my deep understanding of my leader and organisation, and I am most effective when that relationship is strong and trusted"
+      },
+      {
+        "subquestion_id": "q_2018892274",
+        "position": 3,
+        "archetype": "Seductress",
+        "statement": "I understand power instinctively - where it sits, how it moves, and how to position myself within it to achieve what I am here to achieve"
+      }
+    ]
+  },
+  {
+    "question_id": "288881876",
+    "question_number": 12,
+    "dimension": "Ambition",
+    "question_text": "How would you describe your relationship with ambition?",
+    "answers": [
+      {
+        "subquestion_id": "q_2018893545",
+        "position": 0,
+        "archetype": "Empress",
+        "statement": "My ambition is for the collective. I want to build teams and cultures where people genuinely thrive, and that matters to me as much as any metric"
+      },
+      {
+        "subquestion_id": "q_2018893542",
+        "position": 1,
+        "archetype": "Seductress",
+        "statement": "I am unambiguously ambitious - for impact, for recognition, for being at the centre of what matters, and for making an impact. And I make no apology for that"
+      },
+      {
+        "subquestion_id": "q_2018893544",
+        "position": 2,
+        "archetype": "Consort",
+        "statement": "My ambition is channelled through my commitment to my leader and the organisation. I measure success by the quality and success of what we achieve together"
+      },
+      {
+        "subquestion_id": "q_2018893543",
+        "position": 3,
+        "archetype": "Sovereign",
+        "statement": "I am ambitious for outcomes and legacy. I believe in stewardship and want to build something that outlasts me. I hold a long view of what success looks like"
+      }
+    ]
+  }
+]
