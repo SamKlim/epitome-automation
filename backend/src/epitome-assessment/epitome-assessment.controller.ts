@@ -1,13 +1,49 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, Headers } from '@nestjs/common';
 import { EpitomeAssessmentService } from './epitome-assessment.service';
 
 @Controller('api/assessments')
 export class EpitomeAssessmentController {
   constructor(private assessmentService: EpitomeAssessmentService) {}
 
+  private validateBearerToken(authHeader: string | undefined): void {
+    if (!authHeader) {
+      throw new HttpException(
+        'Missing Authorization header',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      throw new HttpException(
+        'Invalid Authorization format. Use: Bearer <token>',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const token = parts[1];
+    const validToken = process.env.API_KEY;
+
+    if (!validToken) {
+      throw new HttpException(
+        'API_KEY not configured',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    if (token !== validToken) {
+      throw new HttpException('Invalid API key', HttpStatus.UNAUTHORIZED);
+    }
+  }
+
   @Post('responses')
-  async submitResponse(@Body() rawResponse: any) {
+  async submitResponse(
+    @Body() rawResponse: any,
+    @Headers('authorization') authHeader: string,
+  ) {
     try {
+      this.validateBearerToken(authHeader);
+
       if (!rawResponse || typeof rawResponse !== 'object') {
         throw new HttpException(
           'Invalid response format. Expected JSON object.',
