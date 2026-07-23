@@ -22,7 +22,7 @@ export class BearerTokenGuard implements CanActivate {
     }
 
     const token = parts[1];
-    const validToken = process.env.API_KEY;
+    const validToken = process.env.MAKE_WEBHOOK_SECRET;
 
     if (!validToken) {
       throw new Error('API_KEY environment variable not set');
