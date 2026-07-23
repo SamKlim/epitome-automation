@@ -22,7 +22,7 @@ export class EpitomeAssessmentController {
     }
 
     const token = parts[1];
-    const validToken = process.env.MAKE_WEBHOOK_SECRET;
+    const validToken = process.env.EPITOME_AUTOMATION_SECRET;
 
     if (!validToken) {
       throw new HttpException(
