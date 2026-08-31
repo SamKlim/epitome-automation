@@ -26,7 +26,7 @@ export class TransformService {
       Seductress: 0,
     };
 
-    const responses = this.buildResponses(response, archetypeScores);
+    const responses = this.buildResponses(response as unknown as Record<string, unknown>, archetypeScores);
 
     return {
       response_id: response.id as string,
