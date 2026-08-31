@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import questionsMap from '../maps/questions_map.json';
+import { SurveyResponseDTO } from './response.dto';
 
 const ARCHETYPES = ['Sovereign', 'Empress', 'Consort', 'Seductress'] as const;
 type Archetype = (typeof ARCHETYPES)[number];
@@ -16,7 +17,7 @@ export class TransformService {
   private questionsMap: any[] = questionsMap;
 
   transform(rawResponse: unknown) {
-    const response = rawResponse as Record<string, unknown>;
+    const response = rawResponse as SurveyResponseDTO;
 
     const archetypeScores: ArchetypeScores = {
       Sovereign: 0,
@@ -37,10 +38,10 @@ export class TransformService {
       collector_id: response.collectorId as string,
       response_status: response.responseStatus as string,
       contact: {
-        first_name: (response.q_288881567 as Record<string, string[]> | undefined)?.q_2018891726?.[0] || '',
-        last_name: (response.q_288881567 as Record<string, string[]> | undefined)?.q_2018891727?.[0] || '',
-        email: (response.q_288881568 as Record<string, string[]> | undefined)?.q_2018891735?.[0] || '',
-        organization: (response.q_288881569 as string) || '',
+        first_name: response.q_288881567?.q_2018891726 || null,
+        last_name: response.q_288881567?.q_2018891727 || null,
+        email: response.q_288881568?.q_2018891735 || null,
+        organization: response.q_288881569 || null,
       },
       responses,
       archetype_scores: archetypeScores,

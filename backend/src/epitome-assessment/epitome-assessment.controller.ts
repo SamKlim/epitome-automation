@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Headers } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, Headers } from '@nestjs/common';
 import { EpitomeAssessmentService } from './epitome-assessment.service';
 
 @Controller('api/assessments')
@@ -70,7 +70,7 @@ export class EpitomeAssessmentController {
     }
   }
 
-  @Post('health')
+  @Get('health')
   health() {
     return { status: 'ok', message: 'Epitome Assessment API is running' };
   }

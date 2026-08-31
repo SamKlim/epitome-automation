@@ -23,11 +23,11 @@ describe('TransformService', () => {
       collectorId: 'col-123',
       responseStatus: 'completed',
       q_288881567: {
-        q_2018891726: ['John'],
-        q_2018891727: ['Doe'],
+        q_2018891726: 'John',
+        q_2018891727: 'Doe',
       },
       q_288881568: {
-        q_2018891735: ['john@example.com'],
+        q_2018891735: 'john@example.com',
       },
       q_288881569: 'Test Org',
       q_288881566: {
@@ -115,9 +115,9 @@ describe('TransformService', () => {
 
       const result = service.transform(incomplete);
 
-      expect(result.contact.first_name).toBe('');
-      expect(result.contact.last_name).toBe('');
-      expect(result.contact.email).toBe('');
+      expect(result.contact.first_name).toBeNull();
+      expect(result.contact.last_name).toBeNull();
+      expect(result.contact.email).toBeNull();
     });
 
     it('should handle missing questions gracefully (scores remain 0)', () => {
@@ -130,8 +130,8 @@ describe('TransformService', () => {
         totalTime: 0,
         collectorId: 'col-minimal',
         responseStatus: 'completed',
-        q_288881567: { q_2018891726: ['Test'] },
-        q_288881568: { q_2018891735: ['test@test.com'] },
+        q_288881567: { q_2018891726: 'Test' },
+        q_288881568: { q_2018891735: 'test@test.com' },
         q_288881569: 'Test',
       };
 

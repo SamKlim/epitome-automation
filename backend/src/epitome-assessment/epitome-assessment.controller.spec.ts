@@ -9,6 +9,7 @@ describe('EpitomeAssessmentController', () => {
   let controller: EpitomeAssessmentController;
   let service: EpitomeAssessmentService;
   let mockSupabaseService: Partial<SupabaseService>;
+  const VALID_TOKEN = 'test-bearer-token';
 
   const validResponse = {
     id: 'test-response-123',
@@ -20,11 +21,11 @@ describe('EpitomeAssessmentController', () => {
     collectorId: 'col-123',
     responseStatus: 'completed',
     q_288881567: {
-      q_2018891726: ['John'],
-      q_2018891727: ['Doe'],
+      q_2018891726: 'John',
+      q_2018891727: 'Doe',
     },
     q_288881568: {
-      q_2018891735: ['john@example.com'],
+      q_2018891735: 'john@example.com',
     },
     q_288881569: 'Test Org',
     q_288881566: {
@@ -102,6 +103,9 @@ describe('EpitomeAssessmentController', () => {
   };
 
   beforeEach(async () => {
+    // Set up environment variable for bearer token validation
+    process.env.EPITOME_AUTOMATION_SECRET = VALID_TOKEN;
+
     mockSupabaseService = {
       insertSurveyResponse: jest
         .fn()
@@ -128,7 +132,7 @@ describe('EpitomeAssessmentController', () => {
 
   describe('POST /api/assessments/responses', () => {
     it('should return 200 with success message for valid response', async () => {
-      const result = await controller.submitResponse(validResponse);
+      const result = await controller.submitResponse(validResponse, `Bearer ${VALID_TOKEN}`);
 
       expect(result.success).toBe(true);
       expect(result.response_id).toBe('test-response-123');
@@ -136,7 +140,7 @@ describe('EpitomeAssessmentController', () => {
     });
 
     it('should return archetype_scores in response', async () => {
-      const result = await controller.submitResponse(validResponse);
+      const result = await controller.submitResponse(validResponse, `Bearer ${VALID_TOKEN}`);
 
       expect(result.archetype_scores).toBeDefined();
       expect(result.archetype_scores).toHaveProperty('Sovereign');
@@ -146,14 +150,14 @@ describe('EpitomeAssessmentController', () => {
     });
 
     it('should call supabaseService.insertSurveyResponse', async () => {
-      await controller.submitResponse(validResponse);
+      await controller.submitResponse(validResponse, `Bearer ${VALID_TOKEN}`);
 
       expect(mockSupabaseService.insertSurveyResponse).toHaveBeenCalled();
     });
 
     it('should throw 400 error when request body is null', async () => {
       try {
-        await controller.submitResponse(null);
+        await controller.submitResponse(null, `Bearer ${VALID_TOKEN}`);
         fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(HttpException);
@@ -163,7 +167,7 @@ describe('EpitomeAssessmentController', () => {
 
     it('should throw 400 error when request body is not an object', async () => {
       try {
-        await controller.submitResponse('invalid');
+        await controller.submitResponse('invalid', `Bearer ${VALID_TOKEN}`);
         fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(HttpException);
@@ -177,7 +181,7 @@ describe('EpitomeAssessmentController', () => {
       delete missing.id;
 
       try {
-        await controller.submitResponse(missing);
+        await controller.submitResponse(missing, `Bearer ${VALID_TOKEN}`);
         fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(HttpException);
@@ -191,7 +195,7 @@ describe('EpitomeAssessmentController', () => {
       delete missing.surveyId;
 
       try {
-        await controller.submitResponse(missing);
+        await controller.submitResponse(missing, `Bearer ${VALID_TOKEN}`);
         fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(HttpException);
@@ -206,7 +210,7 @@ describe('EpitomeAssessmentController', () => {
         .mockRejectedValue(new Error('Database connection failed'));
 
       try {
-        await controller.submitResponse(validResponse);
+        await controller.submitResponse(validResponse, `Bearer ${VALID_TOKEN}`);
         fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(HttpException);
@@ -225,12 +229,12 @@ describe('EpitomeAssessmentController', () => {
         totalTime: 0,
         collectorId: 'col',
         responseStatus: 'completed',
-        q_288881567: { q_2018891726: ['Test'] },
-        q_288881568: { q_2018891735: ['test@test.com'] },
+        q_288881567: { q_2018891726: 'Test' },
+        q_288881568: { q_2018891735: 'test@test.com' },
         q_288881569: 'Test',
       };
 
-      const result = await controller.submitResponse(minimal);
+      const result = await controller.submitResponse(minimal, `Bearer ${VALID_TOKEN}`);
 
       expect(result.success).toBe(true);
       expect(result.response_id).toBe('minimal-123');
