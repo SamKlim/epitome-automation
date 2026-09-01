@@ -28,6 +28,9 @@ export class SupabaseService {
       .insert([data]);
 
     if (error) {
+      if (error.message.includes('duplicate key')) {
+        throw new Error(`Survey response already exists. Response ID: ${data.response_id}`);
+      }
       throw new Error(`Failed to insert survey response: ${error.message}`);
     }
 
