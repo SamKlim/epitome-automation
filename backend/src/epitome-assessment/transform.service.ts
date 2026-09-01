@@ -36,7 +36,6 @@ export class TransformService {
       duration_seconds: response.totalTime as number,
       collector_id: response.collectorId as string,
       response_status: response.responseStatus as string,
-      recipient_id: response.recipientId as string,
       first_name: response.q_288881567?.q_2018891726 || null,
       last_name: response.q_288881567?.q_2018891727 || null,
       email: response.q_288881568?.q_2018891735 || null,
