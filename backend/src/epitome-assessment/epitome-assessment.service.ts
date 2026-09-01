@@ -1,14 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TransformService } from './transform.service';
 import { SupabaseService } from '../db/supabase.service';
 import { ArchetypeLabelService } from './archetype-label.service';
+import { PdfGeneratorService } from './pdf-generator.service';
 
 @Injectable()
 export class EpitomeAssessmentService {
+  private readonly logger = new Logger(EpitomeAssessmentService.name);
+
   constructor(
     private transformService: TransformService,
     private supabaseService: SupabaseService,
     private archetypeLabelService: ArchetypeLabelService,
+    private pdfGeneratorService: PdfGeneratorService,
   ) {}
 
   async processResponse(rawResponse: any) {
@@ -24,6 +28,18 @@ export class EpitomeAssessmentService {
     const archetypeLabel = this.archetypeLabelService.getLeadingLabel(
       transformed.archetype_scores,
     );
+
+    try {
+      const pdfPath = await this.pdfGeneratorService.generateReport(
+        transformed.first_name || 'Unknown',
+        transformed.last_name || 'Unknown',
+        archetypeLabel,
+        transformed.response_id,
+      );
+      this.logger.log(`Generated PDF: ${pdfPath}`);
+    } catch (error) {
+      this.logger.error(`Failed to generate PDF: ${error}`);
+    }
 
     return {
       success: true,
