@@ -23,53 +23,9 @@ export class PdfGeneratorService {
     const pdfBuffer = fs.readFileSync(this.templatePath);
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-    // Page 1: Replace SALLY-ANN SAMPLE with client name
-    const page1 = pdfDoc.getPage(0);
-    const clientName = `${firstName} ${lastName}`.toUpperCase();
-    const bgColor = rgb(0.98, 0.97, 0.95); // Matches template background squiggle
-
-    // BOX 1: Large rectangle covering original SALLY-ANN SAMPLE
-    page1.drawRectangle({
-      x: 200,
-      y: 70,
-      width: 220,
-      height: 30,
-      color: bgColor,
-    });
-
-    // Calculate text dimensions accurately
-    const charWidth = 14 * 0.45; // More accurate char width
-    const textWidth = clientName.length * charWidth;
-    const padding = 4;
-    const fontSize = 14;
-    const boxHeight = 30;
-
-    // Wrap text tightly FIRST, then add padding
-    const centerPageX = (200 + 420) / 2;
-    const textCenterX = centerPageX;
-
-    // Text box (tight around text)
-    const textBoxX = textCenterX - (textWidth / 2);
-    const textBoxY = 70 + (boxHeight / 2) - (fontSize / 2);
-
-    // Padded box (wraps text box)
-    const boxX = textBoxX - padding;
-    const boxY = 70;
-    const boxWidth = textWidth + (padding * 2);
-
-    page1.drawRectangle({
-      x: boxX,
-      y: boxY,
-      width: boxWidth,
-      height: boxHeight,
-      color: bgColor,
-    });
-
-    // Draw text inside padded box
-    this.addTextToPage(page1, clientName, textBoxX, textBoxY, fontSize, rgb(0, 0, 0));
-
     // Page 8: Replace archetype label (cover old text, write new)
     const page8 = pdfDoc.getPage(7);
+    const bgColor = rgb(0.98, 0.97, 0.95);
 
     // Cover old text with matching background color
     page8.drawRectangle({
