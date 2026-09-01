@@ -23,43 +23,53 @@ export class PdfGeneratorService {
     const pdfBuffer = fs.readFileSync(this.templatePath);
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-    // Page 1: Replace SALLY-ANN SAMPLE with client name (exact same spot)
+    // Page 1: Replace SALLY-ANN SAMPLE with client name (exact position: x=231, y=746)
     const page1 = pdfDoc.getPage(0);
     const clientName = `${firstName} ${lastName}`;
 
-    // Cover old text with white rectangle (cream background)
+    // Cover "SALLY-ANN SAMPLE" with white rectangle
     page1.drawRectangle({
-      x: 200,
-      y: 140,
-      width: 400,
+      x: 221,
+      y: 746,
+      width: 168,
+      height: 36,
+      color: rgb(0.96, 0.95, 0.92),
+    });
+
+    // Draw client name at exact position of original text
+    this.addTextToPage(page1, clientName, 231, 760, 14, rgb(0, 0, 0));
+
+    // Page 8: Replace archetype label (cover old text, write new)
+    const page8 = pdfDoc.getPage(7);
+
+    // Cover old text with white rectangle
+    page8.drawRectangle({
+      x: 50,
+      y: 680,
+      width: 500,
       height: 40,
       color: rgb(1, 1, 1),
     });
 
-    // Draw new name at exact position
-    this.addTextToPage(page1, clientName, 250, 155, 22, rgb(0, 0, 0));
-
-    // Page 8: Add archetype label (replacing EMPRESS)
-    const page8 = pdfDoc.getPage(7);
     const archetypes = archetypeLabel.split(' and ');
     if (archetypes.length === 1) {
       this.addTextToPage(
         page8,
         `You tend to lead with the ${archetypeLabel.toUpperCase()}.`,
-        100,
-        700,
+        60,
+        695,
         16,
         rgb(0, 0, 0),
       );
     } else {
-      // Two lines for multiple archetypes with "the" before each
+      // Two lines for multiple archetypes
       const firstArchetype = archetypes[0].trim().toUpperCase();
       const restArchetypes = archetypes
         .slice(1)
         .map((a) => `the ${a.trim().toUpperCase()}`)
         .join(' AND ');
-      this.addTextToPage(page8, `You tend to lead with the ${firstArchetype}`, 100, 710, 16, rgb(0, 0, 0));
-      this.addTextToPage(page8, `AND ${restArchetypes}.`, 100, 690, 16, rgb(0, 0, 0));
+      this.addTextToPage(page8, `You tend to lead with the ${firstArchetype}`, 60, 705, 16, rgb(0, 0, 0));
+      this.addTextToPage(page8, `AND ${restArchetypes}.`, 60, 690, 16, rgb(0, 0, 0));
     }
 
     const fileName = `epitome-report-${responseId}.pdf`;
