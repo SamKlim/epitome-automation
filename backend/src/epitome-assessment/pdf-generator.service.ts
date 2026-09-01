@@ -23,9 +23,21 @@ export class PdfGeneratorService {
     const pdfBuffer = fs.readFileSync(this.templatePath);
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-    // Page 1: Add client name (replacing SALLY-ANN SAMPLE)
+    // Page 1: Replace SALLY-ANN SAMPLE with client name (exact same spot)
     const page1 = pdfDoc.getPage(0);
-    this.addTextToPage(page1, `${firstName} ${lastName}`, 300, 150, 24, rgb(0, 0, 0));
+    const clientName = `${firstName} ${lastName}`;
+
+    // Cover old text with white rectangle (cream background)
+    page1.drawRectangle({
+      x: 200,
+      y: 140,
+      width: 400,
+      height: 40,
+      color: rgb(1, 1, 1),
+    });
+
+    // Draw new name at exact position
+    this.addTextToPage(page1, clientName, 250, 155, 22, rgb(0, 0, 0));
 
     // Page 8: Add archetype label (replacing EMPRESS)
     const page8 = pdfDoc.getPage(7);
