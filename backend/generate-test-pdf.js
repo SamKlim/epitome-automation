@@ -35,26 +35,32 @@ async function generatePDF() {
   const pdfBuffer = fs.readFileSync(templatePath);
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Page 1 - Cover SALLY-ANN SAMPLE at exact position (x=231, y=746)
   const page1 = pdfDoc.getPage(0);
-  const clientName = `${response.first_name} ${response.last_name}`;
+  const clientName = `${response.first_name} ${response.last_name}`.toUpperCase();
   
+  // Original SALLY-ANN SAMPLE: x=231-379, y=85.99 from bottom, height=16
+  // Make rectangle wider and taller to fully cover
   page1.drawRectangle({
-    x: 221,
-    y: 746,
-    width: 168,
-    height: 36,
-    color: rgb(0.96, 0.95, 0.92), // Cream
+    x: 200,
+    y: 70,
+    width: 220,
+    height: 30,
+    color: rgb(0.96, 0.95, 0.92),
   });
   
+  // Center the text using same font size as original (14pt for Helvetica)
+  const charWidth = 14 * 0.55; // Helvetica is slightly wider
+  const textWidth = clientName.length * charWidth;
+  const centerX = (200 + 420) / 2 - textWidth / 2; // Center in rectangle
+  
   page1.drawText(clientName, {
-    x: 231,
-    y: 760,
+    x: centerX,
+    y: 78,
     size: 14,
     color: rgb(0, 0, 0),
   });
 
-  // Page 8 - Replace archetype
+  // Page 8
   const page8 = pdfDoc.getPage(7);
   page8.drawRectangle({
     x: 40,
@@ -86,10 +92,7 @@ async function generatePDF() {
   const filePath = path.join(reportsDir, `epitome-report-${response.response_id}.pdf`);
   fs.writeFileSync(filePath, await pdfDoc.save());
 
-  console.log(`✅ PDF generated with precise coordinates:`);
-  console.log(`   Client: ${clientName}`);
-  console.log(`   Archetype: ${archetypeLabel}`);
-  console.log(`   File: ${filePath}`);
+  console.log(`✅ PDF updated: ${clientName}`);
 }
 
 generatePDF().catch(console.error);

@@ -23,21 +23,24 @@ export class PdfGeneratorService {
     const pdfBuffer = fs.readFileSync(this.templatePath);
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-    // Page 1: Replace SALLY-ANN SAMPLE with client name (exact position: x=231, y=746)
+    // Page 1: Replace SALLY-ANN SAMPLE with client name
     const page1 = pdfDoc.getPage(0);
-    const clientName = `${firstName} ${lastName}`;
+    const clientName = `${firstName} ${lastName}`.toUpperCase();
 
-    // Cover "SALLY-ANN SAMPLE" with white rectangle
+    // Cover "SALLY-ANN SAMPLE" with white rectangle (y=70-100, x=200-420)
     page1.drawRectangle({
-      x: 221,
-      y: 746,
-      width: 168,
-      height: 36,
+      x: 200,
+      y: 70,
+      width: 220,
+      height: 30,
       color: rgb(0.96, 0.95, 0.92),
     });
 
-    // Draw client name at exact position of original text
-    this.addTextToPage(page1, clientName, 231, 760, 14, rgb(0, 0, 0));
+    // Center-align client name in rectangle
+    const charWidth = 14 * 0.55;
+    const textWidth = clientName.length * charWidth;
+    const centerX = (200 + 420) / 2 - textWidth / 2;
+    this.addTextToPage(page1, clientName, centerX, 78, 14, rgb(0, 0, 0));
 
     // Page 8: Replace archetype label (cover old text, write new)
     const page8 = pdfDoc.getPage(7);
@@ -79,6 +82,18 @@ export class PdfGeneratorService {
     fs.writeFileSync(filePath, pdfBytes);
 
     return filePath;
+  }
+
+  private getCenteredX(
+    text: string,
+    fontSize: number,
+    rangeStart: number,
+    rangeEnd: number,
+  ): number {
+    const charWidth = fontSize * 0.5;
+    const textWidth = text.length * charWidth;
+    const rangeCenter = (rangeStart + rangeEnd) / 2;
+    return rangeCenter - textWidth / 2;
   }
 
   private addTextToPage(
