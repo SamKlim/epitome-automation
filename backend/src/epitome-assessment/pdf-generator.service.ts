@@ -43,16 +43,17 @@ export class PdfGeneratorService {
     const centerX = (200 + 420) / 2 - textWidth / 2;
     const padding = 4;
 
-    this.addTextToPage(page1, clientName, centerX, 78, 14, rgb(0, 0, 0));
-
-    // BOX 2: Tight rectangle around new name with 4px padding
+    // BOX 2: Tight rectangle around new name with 4px padding (same height as large box)
     page1.drawRectangle({
       x: centerX - padding,
-      y: 72,
+      y: 70,
       width: textWidth + (padding * 2),
-      height: 20,
+      height: 30,
       color: bgColor,
     });
+
+    // Draw text on top (after rectangles)
+    this.addTextToPage(page1, clientName, centerX, 78, 14, rgb(0, 0, 0));
 
     // Page 8: Replace archetype label (cover old text, write new)
     const page8 = pdfDoc.getPage(7);
