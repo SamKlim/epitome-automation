@@ -37,17 +37,24 @@ export class PdfGeneratorService {
       color: bgColor,
     });
 
-    // Center-align client name in rectangle
-    const charWidth = 14 * 0.6; // Slightly wider to account for actual rendered width
+    // Calculate text dimensions accurately
+    const charWidth = 14 * 0.45; // More accurate char width
     const textWidth = clientName.length * charWidth;
-    const centerPageX = (200 + 420) / 2;
     const padding = 4;
     const fontSize = 14;
-    const boxHeight = 30; // Same height as large box underneath
+    const boxHeight = 30;
 
-    // BOX 2: Tight rectangle with consistent padding, same height as large box
-    const boxX = centerPageX - (textWidth / 2) - padding;
-    const boxY = 70; // Same y as large box
+    // Wrap text tightly FIRST, then add padding
+    const centerPageX = (200 + 420) / 2;
+    const textCenterX = centerPageX;
+
+    // Text box (tight around text)
+    const textBoxX = textCenterX - (textWidth / 2);
+    const textBoxY = 70 + (boxHeight / 2) - (fontSize / 2);
+
+    // Padded box (wraps text box)
+    const boxX = textBoxX - padding;
+    const boxY = 70;
     const boxWidth = textWidth + (padding * 2);
 
     page1.drawRectangle({
@@ -58,10 +65,8 @@ export class PdfGeneratorService {
       color: bgColor,
     });
 
-    // Draw text centered vertically and horizontally inside box
-    const textX = boxX + padding;
-    const textY = boxY + (boxHeight / 2) - 2; // Vertically centered
-    this.addTextToPage(page1, clientName, textX, textY, fontSize, rgb(0, 0, 0));
+    // Draw text inside padded box
+    this.addTextToPage(page1, clientName, textBoxX, textBoxY, fontSize, rgb(0, 0, 0));
 
     // Page 8: Replace archetype label (cover old text, write new)
     const page8 = pdfDoc.getPage(7);

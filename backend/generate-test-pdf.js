@@ -39,7 +39,7 @@ async function generatePDF() {
   const clientName = `${response.first_name} ${response.last_name}`.toUpperCase();
   const bgColor = rgb(0.98, 0.97, 0.95);
   
-  // BOX 1: Large rectangle covering original SALLY-ANN SAMPLE
+  // BOX 1: Large rectangle
   page1.drawRectangle({
     x: 200,
     y: 70,
@@ -48,19 +48,23 @@ async function generatePDF() {
     color: bgColor,
   });
   
-  // Calculate box dimensions
-  const charWidth = 14 * 0.6;
+  // Calculate text dimensions
+  const charWidth = 14 * 0.45;
   const textWidth = clientName.length * charWidth;
-  const centerPageX = (200 + 420) / 2;
   const padding = 4;
   const fontSize = 14;
-  const boxHeight = 30; // Same as large box
+  const boxHeight = 30;
   
-  const boxX = centerPageX - (textWidth / 2) - padding;
-  const boxY = 70; // Same y position
+  // Wrap text tightly, then add padding
+  const centerPageX = (200 + 420) / 2;
+  const textBoxX = centerPageX - (textWidth / 2);
+  const textBoxY = 70 + (boxHeight / 2) - (fontSize / 2);
+  
+  // Padded box
+  const boxX = textBoxX - padding;
+  const boxY = 70;
   const boxWidth = textWidth + (padding * 2);
   
-  // BOX 2: Same height as large box
   page1.drawRectangle({
     x: boxX,
     y: boxY,
@@ -69,12 +73,10 @@ async function generatePDF() {
     color: bgColor,
   });
   
-  // Draw text centered
-  const textX = boxX + padding;
-  const textY = boxY + (boxHeight / 2) - 2;
+  // Draw text
   page1.drawText(clientName, {
-    x: textX,
-    y: textY,
+    x: textBoxX,
+    y: textBoxY,
     size: fontSize,
     color: rgb(0, 0, 0),
   });
@@ -111,7 +113,7 @@ async function generatePDF() {
   const filePath = path.join(reportsDir, `epitome-report-${response.response_id}.pdf`);
   fs.writeFileSync(filePath, await pdfDoc.save());
 
-  console.log(`✅ PDF updated`);
+  console.log(`✅ PDF updated - text wrapped then padded`);
 }
 
 generatePDF().catch(console.error);
