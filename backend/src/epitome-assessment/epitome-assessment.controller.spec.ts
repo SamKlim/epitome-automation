@@ -3,6 +3,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { EpitomeAssessmentController } from './epitome-assessment.controller';
 import { EpitomeAssessmentService } from './epitome-assessment.service';
 import { TransformService } from './transform.service';
+import { ArchetypeLabelService } from './archetype-label.service';
 import { SupabaseService } from '../db/supabase.service';
 
 describe('EpitomeAssessmentController', () => {
@@ -117,6 +118,7 @@ describe('EpitomeAssessmentController', () => {
       providers: [
         EpitomeAssessmentService,
         TransformService,
+        ArchetypeLabelService,
         {
           provide: SupabaseService,
           useValue: mockSupabaseService,
@@ -139,7 +141,7 @@ describe('EpitomeAssessmentController', () => {
       expect(result.message).toContain('successfully');
     });
 
-    it('should return archetype_scores in response', async () => {
+    it('should return archetype_scores and archetype_label in response', async () => {
       const result = await controller.submitResponse(validResponse, `Bearer ${VALID_TOKEN}`);
 
       expect(result.archetype_scores).toBeDefined();
@@ -147,6 +149,8 @@ describe('EpitomeAssessmentController', () => {
       expect(result.archetype_scores).toHaveProperty('Empress');
       expect(result.archetype_scores).toHaveProperty('Consort');
       expect(result.archetype_scores).toHaveProperty('Seductress');
+      expect(result.archetype_label).toBeDefined();
+      expect(typeof result.archetype_label).toBe('string');
     });
 
     it('should call supabaseService.insertSurveyResponse', async () => {
