@@ -48,26 +48,34 @@ async function generatePDF() {
     color: bgColor,
   });
   
-  // Calculate position
+  // Calculate box with consistent padding
   const charWidth = 14 * 0.55;
   const textWidth = clientName.length * charWidth;
-  const centerX = (200 + 420) / 2 - textWidth / 2;
+  const centerPageX = (200 + 420) / 2;
   const padding = 4;
+  const fontSize = 14;
   
-  // BOX 2: Tight rectangle with same height as large box
+  const boxX = centerPageX - (textWidth / 2) - padding;
+  const boxY = 75 - padding;
+  const boxWidth = textWidth + (padding * 2);
+  const boxHeight = fontSize + (padding * 2);
+  
+  // BOX 2: Tight rectangle with consistent padding
   page1.drawRectangle({
-    x: centerX - padding,
-    y: 70,
-    width: textWidth + (padding * 2),
-    height: 30,
+    x: boxX,
+    y: boxY,
+    width: boxWidth,
+    height: boxHeight,
     color: bgColor,
   });
   
-  // Draw text on top
+  // Draw text with consistent padding inside box
+  const textX = boxX + padding;
+  const textY = boxY + padding;
   page1.drawText(clientName, {
-    x: centerX,
-    y: 78,
-    size: 14,
+    x: textX,
+    y: textY,
+    size: fontSize,
     color: rgb(0, 0, 0),
   });
 
@@ -103,7 +111,7 @@ async function generatePDF() {
   const filePath = path.join(reportsDir, `epitome-report-${response.response_id}.pdf`);
   fs.writeFileSync(filePath, await pdfDoc.save());
 
-  console.log(`✅ PDF updated`);
+  console.log(`✅ PDF updated with consistent padding`);
 }
 
 generatePDF().catch(console.error);
