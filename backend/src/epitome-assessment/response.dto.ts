@@ -20,8 +20,8 @@ export class SurveyResponseDTO {
   /** When response was created (optional) */
   dateCreated?: string;
 
-  /** When response was last modified (optional) */
-  dateModified?: string;
+  /** Recipient ID - who the survey was sent to (optional) */
+  recipientId?: string;
 
   /** Contact info: first name, last name (from SurveyMonkey q_288881567) */
   q_288881567?: {

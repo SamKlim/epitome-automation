@@ -41,12 +41,10 @@ describe('TransformService', () => {
     it('should extract contact information correctly', () => {
       const result = service.transform(validResponse);
 
-      expect(result.contact).toEqual({
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'john@example.com',
-        organization: 'Test Org',
-      });
+      expect(result.first_name).toBe('John');
+      expect(result.last_name).toBe('Doe');
+      expect(result.email).toBe('john@example.com');
+      expect(result.organization).toBe('Test Org');
     });
 
     it('should return response_id and survey_id from input', () => {
@@ -115,9 +113,9 @@ describe('TransformService', () => {
 
       const result = service.transform(incomplete);
 
-      expect(result.contact.first_name).toBeNull();
-      expect(result.contact.last_name).toBeNull();
-      expect(result.contact.email).toBeNull();
+      expect(result.first_name).toBeNull();
+      expect(result.last_name).toBeNull();
+      expect(result.email).toBeNull();
     });
 
     it('should handle missing questions gracefully (scores remain 0)', () => {
