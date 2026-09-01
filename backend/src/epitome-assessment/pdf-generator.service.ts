@@ -38,17 +38,17 @@ export class PdfGeneratorService {
     });
 
     // Center-align client name in rectangle
-    const charWidth = 14 * 0.55;
+    const charWidth = 14 * 0.6; // Slightly wider to account for actual rendered width
     const textWidth = clientName.length * charWidth;
     const centerPageX = (200 + 420) / 2;
     const padding = 4;
     const fontSize = 14;
+    const boxHeight = 30; // Same height as large box underneath
 
-    // BOX 2: Tight rectangle with consistent padding on all sides
+    // BOX 2: Tight rectangle with consistent padding, same height as large box
     const boxX = centerPageX - (textWidth / 2) - padding;
-    const boxY = 75 - padding;
+    const boxY = 70; // Same y as large box
     const boxWidth = textWidth + (padding * 2);
-    const boxHeight = fontSize + (padding * 2);
 
     page1.drawRectangle({
       x: boxX,
@@ -58,9 +58,9 @@ export class PdfGeneratorService {
       color: bgColor,
     });
 
-    // Draw text centered inside box with consistent padding
+    // Draw text centered vertically and horizontally inside box
     const textX = boxX + padding;
-    const textY = boxY + padding;
+    const textY = boxY + (boxHeight / 2) - 2; // Vertically centered
     this.addTextToPage(page1, clientName, textX, textY, fontSize, rgb(0, 0, 0));
 
     // Page 8: Replace archetype label (cover old text, write new)
