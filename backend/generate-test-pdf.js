@@ -38,26 +38,41 @@ async function generatePDF() {
   const page1 = pdfDoc.getPage(0);
   const clientName = `${response.first_name} ${response.last_name}`.toUpperCase();
   
-  // Original SALLY-ANN SAMPLE: x=231-379, y=85.99 from bottom, height=16
-  // Make rectangle wider and taller to fully cover
+  // Exact background color - lighter cream (matching squiggle on template)
+  const bgColor = rgb(0.98, 0.97, 0.95);
+  
+  // BOX 1: Large rectangle covering original SALLY-ANN SAMPLE
   page1.drawRectangle({
     x: 200,
     y: 70,
     width: 220,
     height: 30,
-    color: rgb(0.96, 0.95, 0.92),
+    color: bgColor,
   });
   
-  // Center the text using same font size as original (14pt for Helvetica)
-  const charWidth = 14 * 0.55; // Helvetica is slightly wider
+  // Calculate position and size for new name
+  const charWidth = 14 * 0.55;
   const textWidth = clientName.length * charWidth;
-  const centerX = (200 + 420) / 2 - textWidth / 2; // Center in rectangle
+  const centerX = (200 + 420) / 2 - textWidth / 2;
+  const padding = 4;
   
+  // Draw the new name text
   page1.drawText(clientName, {
     x: centerX,
     y: 78,
     size: 14,
     color: rgb(0, 0, 0),
+  });
+  
+  // BOX 2: Tight rectangle around new name with 4px padding
+  page1.drawRectangle({
+    x: centerX - padding,
+    y: 72,
+    width: textWidth + (padding * 2),
+    height: 20,
+    color: bgColor,
+    borderColor: rgb(0.7, 0.7, 0.7),
+    borderWidth: 0.5,
   });
 
   // Page 8
@@ -67,7 +82,7 @@ async function generatePDF() {
     y: 675,
     width: 520,
     height: 45,
-    color: rgb(0.96, 0.95, 0.92),
+    color: bgColor,
   });
 
   const archetypes = archetypeLabel.split(' and ');
@@ -92,7 +107,7 @@ async function generatePDF() {
   const filePath = path.join(reportsDir, `epitome-report-${response.response_id}.pdf`);
   fs.writeFileSync(filePath, await pdfDoc.save());
 
-  console.log(`✅ PDF updated: ${clientName}`);
+  console.log(`✅ PDF updated with adjusted color: rgb(0.98, 0.97, 0.95)`);
 }
 
 generatePDF().catch(console.error);

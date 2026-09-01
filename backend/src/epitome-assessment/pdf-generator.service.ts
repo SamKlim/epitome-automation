@@ -26,32 +26,44 @@ export class PdfGeneratorService {
     // Page 1: Replace SALLY-ANN SAMPLE with client name
     const page1 = pdfDoc.getPage(0);
     const clientName = `${firstName} ${lastName}`.toUpperCase();
+    const bgColor = rgb(0.98, 0.97, 0.95); // Matches template background squiggle
 
-    // Cover "SALLY-ANN SAMPLE" with white rectangle (y=70-100, x=200-420)
+    // BOX 1: Large rectangle covering original SALLY-ANN SAMPLE
     page1.drawRectangle({
       x: 200,
       y: 70,
       width: 220,
       height: 30,
-      color: rgb(0.96, 0.95, 0.92),
+      color: bgColor,
     });
 
     // Center-align client name in rectangle
     const charWidth = 14 * 0.55;
     const textWidth = clientName.length * charWidth;
     const centerX = (200 + 420) / 2 - textWidth / 2;
+    const padding = 4;
+
     this.addTextToPage(page1, clientName, centerX, 78, 14, rgb(0, 0, 0));
+
+    // BOX 2: Tight rectangle around new name with 4px padding
+    page1.drawRectangle({
+      x: centerX - padding,
+      y: 72,
+      width: textWidth + (padding * 2),
+      height: 20,
+      color: bgColor,
+    });
 
     // Page 8: Replace archetype label (cover old text, write new)
     const page8 = pdfDoc.getPage(7);
 
-    // Cover old text with white rectangle
+    // Cover old text with matching background color
     page8.drawRectangle({
       x: 50,
       y: 680,
       width: 500,
       height: 40,
-      color: rgb(1, 1, 1),
+      color: bgColor,
     });
 
     const archetypes = archetypeLabel.split(' and ');
