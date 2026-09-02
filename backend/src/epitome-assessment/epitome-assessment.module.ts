@@ -6,8 +6,10 @@ import { ArchetypeLabelService } from './archetype-label.service';
 import { PdfGeneratorService } from './pdf-generator.service';
 import { SupabaseService } from '../db/supabase.service';
 import { BearerTokenGuard } from '../auth/auth.guard';
+import { EmailModule } from '../email/email.module';
 
 @Module({
+  imports: [EmailModule],
   controllers: [EpitomeAssessmentController],
   providers: [
     EpitomeAssessmentService,
