@@ -37,14 +37,11 @@ export class EpitomeAssessmentService {
       transformed.archetype_scores,
     );
 
-    // Step 2: Generate PDF
+    // Step 2: Generate PDF (fetches name and archetype from Supabase)
     const pdfStart = Date.now();
     let pdfPath: string;
     try {
-      pdfPath = await this.pdfGeneratorService.generateReport(
-        transformed.first_name || 'Unknown',
-        transformed.last_name || 'Unknown',
-        archetypeLabel,
+      pdfPath = await this.pdfGeneratorService.createCustomisedReport(
         transformed.response_id,
       );
       timings.pdf = Date.now() - pdfStart;
