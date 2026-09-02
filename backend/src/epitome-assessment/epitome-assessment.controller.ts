@@ -62,9 +62,19 @@ export class EpitomeAssessmentController {
       return result;
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      console.error('Error processing assessment:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      console.error('❌ Error processing assessment:', {
+        message: errorMessage,
+        stack: errorStack,
+        type: error instanceof Error ? error.constructor.name : typeof error,
+      });
       throw new HttpException(
-        `Failed to process assessment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        {
+          error: 'Failed to process assessment',
+          details: errorMessage,
+          ...(process.env.NODE_ENV === 'development' && { stack: errorStack }),
+        },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

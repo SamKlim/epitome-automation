@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import * as fs from 'fs';
 import * as path from 'path';
-import { generateRadarChart } from '../radarChart';
+import { generateRadarChartSvg } from '../radarChart-svg';
 import { SupabaseService } from '../db/supabase.service';
 
 @Injectable()
@@ -90,7 +90,7 @@ export class PdfGeneratorService {
     });
 
     // Generate radar chart PNG with dynamic bounding box (no padding)
-    const radarChartBuffer = await generateRadarChart();
+    const radarChartBuffer = await generateRadarChartSvg();
     const radarImage = await pdfDoc.embedPng(radarChartBuffer);
 
     // Define the target box dimensions where chart will be placed

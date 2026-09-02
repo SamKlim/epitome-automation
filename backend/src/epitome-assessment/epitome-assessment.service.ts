@@ -47,7 +47,13 @@ export class EpitomeAssessmentService {
       timings.pdf = Date.now() - pdfStart;
       this.logger.log(`Generated PDF: ${pdfPath} (${timings.pdf}ms)`);
     } catch (error) {
-      this.logger.error(`Failed to generate PDF: ${error}`);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      this.logger.error(`Failed to generate PDF for ${transformed.response_id}:`, {
+        message: errorMsg,
+        stack: errorStack,
+        type: error instanceof Error ? error.constructor.name : typeof error,
+      });
       throw error;
     }
 
