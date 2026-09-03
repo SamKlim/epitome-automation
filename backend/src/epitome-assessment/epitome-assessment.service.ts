@@ -60,17 +60,21 @@ export class EpitomeAssessmentService {
       throw error;
     }
 
-    // Step 3: Send email in background (fire and forget)
-    // Don't await - return success to client immediately
+    // Step 3: Send email (wait for completion)
     if (transformed.email) {
-      this.logger.log(`📧 Queuing email to ${transformed.email}...`);
-      this.sendEmailInBackground(
-        transformed.email,
-        transformed.first_name || 'Unknown',
-        transformed.last_name || 'Unknown',
-        pdfPath,
-        transformed.response_id,
-      );
+      this.logger.log(`📧 Sending email to ${transformed.email}...`);
+      try {
+        await this.sendEmailInBackground(
+          transformed.email,
+          transformed.first_name || 'Unknown',
+          transformed.last_name || 'Unknown',
+          pdfPath,
+          transformed.response_id,
+        );
+      } catch (emailError) {
+        // Log but don't fail the entire request
+        this.logger.error(`Email send failed (non-fatal):`, emailError);
+      }
     }
 
     const totalTime = Date.now() - startTime;
