@@ -1,4 +1,8 @@
-import { EpitomeReportGeneratorService } from './epitome-report-generator.service';
+import * as fs from 'fs';
+import {
+  EpitomeReportGeneratorService,
+  resolveTemplatePath,
+} from './epitome-report-generator.service';
 import { EpitomeAssessmentService } from './epitome-assessment.service';
 import { SupabaseService } from '../db-supabase/supabase.service';
 import {
@@ -160,6 +164,21 @@ describe('Radar chart generation', () => {
         { dimension: 'X', Sovereign: 4, Empress: 3, Consort: 2, Seductress: 1 },
       ]);
       expect(a).not.toEqual(b);
+    });
+  });
+
+  describe('resolveTemplatePath', () => {
+    it('finds the template next to the source tree', () => {
+      expect(resolveTemplatePath()).toMatch(/epitome-assessment-sample\.pdf$/);
+      expect(fs.existsSync(resolveTemplatePath())).toBe(true);
+    });
+
+    it('throws listing every location tried when the template is missing', () => {
+      const nothingExists = () => false;
+      expect(() => resolveTemplatePath(nothingExists)).toThrow(
+        /Report template epitome-assessment-sample\.pdf not found\. Tried:/,
+      );
+      expect(() => resolveTemplatePath(nothingExists)).toThrow(/src\/epitome-assessment-sample\.pdf/);
     });
   });
 

@@ -53,6 +53,10 @@ describe('Survey Submission E2E', () => {
     it('should label the lowest-scoring archetypes as leading', () => {
       expect(apiResponse.body.archetype_label).toBe(fixture.expectedLabel);
     });
+
+    it('should have handed the report to Gmail', () => {
+      expect(apiResponse.body.email_sent).toBe(true);
+    });
   });
 
   describe('POST /api/assessments/responses — rejections', () => {

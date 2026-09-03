@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EpitomeAssessmentModule } from './epitome-assessment/epitome-assessment.module';
-import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -10,7 +9,6 @@ import { EmailModule } from './email/email.module';
       envFilePath: '.env.local',
     }),
     EpitomeAssessmentModule,
-    EmailModule,
   ],
 })
 export class AppModule {}

@@ -6,6 +6,23 @@ import { SupabaseService } from '../db-supabase/supabase.service';
 import { EpitomeReportGeneratorService } from './epitome-report-generator.service';
 import { SurveyResponseDTO } from './response.dto';
 import { ARCHETYPES, Archetype, ArchetypeScores, getArchetypeLabel } from './archetype-label';
+import { classifySmtpError, describeSmtpFailure } from './smtp-error';
+
+/**
+ * SMTP timeouts. The first two happen before any data moves; the socket
+ * timeout is an *inactivity* limit, so it only fires if the ~3.5MB attachment
+ * upload actually stalls, not merely because it takes a while.
+ */
+const SMTP_CONNECTION_TIMEOUT_MS = 10_000;
+const SMTP_GREETING_TIMEOUT_MS = 10_000;
+const SMTP_SOCKET_TIMEOUT_MS = 30_000;
+
+/**
+ * Kept small on purpose: this runs inside a serverless request, and a retry
+ * that sleeps longer than the function's max duration is just a killed function.
+ */
+const EMAIL_MAX_ATTEMPTS = 2;
+const EMAIL_RETRY_DELAY_MS = 3_000;
 
 export interface TransformedSurveyResponse {
   response_id: string;
@@ -43,6 +60,9 @@ export class EpitomeAssessmentService {
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user, pass },
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
     });
   }
 
@@ -78,32 +98,30 @@ export class EpitomeAssessmentService {
       throw error;
     }
 
-    // Step 3: Send email (wait for completion)
+    // Step 3: Send email and wait for it — on serverless the function ends with the response.
+    // A failed send is logged and reported in the body, but the stored response still returns 201.
+    let emailSent = false;
     if (transformed.email) {
-      this.logger.log(`📧 Sending email to ${transformed.email}...`);
-      try {
-        await this.sendEmailReportInBackground(
-          transformed.email,
-          transformed.first_name || 'Unknown',
-          transformed.last_name || 'Unknown',
-          reportPath,
-          transformed.response_id,
-        );
-      } catch (emailError) {
-        this.logger.error(`Email send failed (non-fatal):`, emailError);
-      }
+      emailSent = await this.sendEmailReportWithRetry(
+        transformed.email,
+        transformed.first_name || 'Unknown',
+        transformed.last_name || 'Unknown',
+        reportPath,
+        transformed.response_id,
+      );
+    } else {
+      this.logger.warn(`[${transformed.response_id}] No email address in response; report not sent`);
     }
 
-    this.logger.log(`✅ Assessment ${transformed.response_id} processed`);
-
-    const archetypeLabel = getArchetypeLabel(transformed.archetype_scores);
+    this.logger.log(`✅ Assessment ${transformed.response_id} processed (email_sent=${emailSent})`);
 
     return {
       success: true,
       response_id: transformed.response_id,
       message: 'Assessment response processed successfully',
       archetype_scores: transformed.archetype_scores,
-      archetype_label: archetypeLabel,
+      archetype_label: getArchetypeLabel(transformed.archetype_scores),
+      email_sent: emailSent,
     };
   }
 
@@ -179,40 +197,40 @@ export class EpitomeAssessmentService {
     return responses;
   }
 
-  private async sendEmailReportInBackground(
+  /** Returns true if Gmail accepted the message. Never throws; failures are logged. */
+  private async sendEmailReportWithRetry(
     email: string,
     firstName: string,
     lastName: string,
     reportPath: string,
     responseId: string,
-  ): Promise<void> {
-    const maxRetries = 3;
-    let attempt = 1;
-
-    while (attempt <= maxRetries) {
+  ): Promise<boolean> {
+    for (let attempt = 1; attempt <= EMAIL_MAX_ATTEMPTS; attempt++) {
+      this.logger.log(`[${responseId}] Sending report to ${email} (attempt ${attempt}/${EMAIL_MAX_ATTEMPTS})`);
       try {
         await this.sendEmailReport(email, firstName, lastName, reportPath);
-        this.logger.log(`[${responseId}] Email sent to ${email} on attempt ${attempt}`);
-        return;
+        return true;
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.logger.warn(
-          `[${responseId}] Attempt ${attempt}/${maxRetries} failed: ${errorMessage}`,
-        );
+        const failure = classifySmtpError(error);
+        this.logger.error(`[${responseId}] ${describeSmtpFailure(failure, process.env.GMAIL_USER)}`);
 
-        if (attempt < maxRetries) {
-          const delays = [40000, 60000];
-          const delayMs = delays[attempt - 1];
-          this.logger.log(`[${responseId}] Retrying in ${delayMs / 1000}s...`);
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-          attempt++;
-        } else {
-          this.logger.error(
-            `[${responseId}] Failed to send email to ${email} after ${maxRetries} attempts: ${errorMessage}`,
-          );
+        if (failure.kind === 'auth') {
+          this.logger.error(`[${responseId}] Not retrying: credentials will not change between attempts`);
+          return false;
+        }
+        if (attempt < EMAIL_MAX_ATTEMPTS) {
+          this.logger.log(`[${responseId}] Retrying in ${EMAIL_RETRY_DELAY_MS / 1000}s`);
+          await this.delay(EMAIL_RETRY_DELAY_MS);
         }
       }
     }
+
+    this.logger.error(`[${responseId}] Giving up after ${EMAIL_MAX_ATTEMPTS} attempts; report not emailed to ${email}`);
+    return false;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private async sendEmailReport(
@@ -221,16 +239,40 @@ export class EpitomeAssessmentService {
     lastName: string,
     reportPath: string,
   ): Promise<void> {
-
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-      throw new Error('Gmail credentials not configured');
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPassword = process.env.GMAIL_APP_PASSWORD;
+    this.logger.log(
+      `Gmail credentials: user ${gmailUser ? 'set' : 'MISSING'}, app password ${gmailPassword ? 'set' : 'MISSING'}`,
+    );
+    if (!gmailUser || !gmailPassword) {
+      throw new Error('Gmail credentials not configured (GMAIL_USER / GMAIL_APP_PASSWORD)');
     }
 
     if (!fs.existsSync(reportPath)) {
       throw new Error(`Report file not found at: ${reportPath}`);
     }
 
-    const emailBody = `<p>Dear ${firstName}</p>
+    const info = await this.transporter.sendMail({
+      from: gmailUser,
+      to: email,
+      subject: 'Your Epitome Archetype Assessment Report',
+      html: buildEmailBody(firstName),
+      attachments: [
+        {
+          filename: `epitome-report-${firstName}-${lastName}.pdf`,
+          path: reportPath,
+        },
+      ],
+    });
+
+    this.logger.log(
+      `Gmail accepted message ${info.messageId} for ${info.accepted?.join(', ') ?? email}`,
+    );
+  }
+}
+
+function buildEmailBody(firstName: string): string {
+  return `<p>Dear ${firstName}</p>
 
 <p>Thank you for completing your Epitome Archetype Assessment. Your personalised report on the four archetypes is attached.</p>
 
@@ -258,21 +300,4 @@ HM Singer<br/>
 <a href="https://instagram.com/epitomeleadership" target="_blank">@epitomeleadership</a><br/>
 <a href="https://linkedin.com/in/mesinger" target="_blank">linkedin.com/in/mesinger</a>
 </p>`;
-
-    const mailOptions = {
-      from: process.env.GMAIL_USER,
-      to: email,
-      subject: 'Your Epitome Archetype Assessment Report',
-      html: emailBody,
-      attachments: [
-        {
-          filename: `epitome-report-${firstName}-${lastName}.pdf`,
-          path: reportPath,
-        },
-      ],
-    };
-
-    await this.transporter.sendMail(mailOptions);
-    this.logger.log(`Email sent to ${email}`);
-  }
 }

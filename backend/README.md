@@ -23,7 +23,7 @@ Survey response processing, archetype calculation, and PDF report generation for
    - If two archetypes land within 2 points of the lowest score, both are shown together as the leading archetype (e.g. "Sovereign and Empress")
 5. **Store** (`SupabaseService.insertSurveyResponse()`): Rankings are saved to Supabase **exactly as received** (1 stays 1, 4 stays 4), along with the calculated archetype scores
 6. **Generate Report** (`EpitomeReportGeneratorService.createCustomisedReport()`): Create customized PDF with user name, leading archetype label, and radar chart visualization of scores
-7. **Send Email** (`EpitomeAssessmentService.sendEmailReportInBackground()`): Deliver PDF to user via Gmail with retry logic
+7. **Send Email** (`EpitomeAssessmentService.sendEmailReportWithRetry()`): Deliver PDF to user via Gmail. The send is awaited (on serverless the function ends with the response), retried once after a short delay, and never retried on a credential rejection. A failure is logged with the SMTP code and response and reported as `email_sent: false` in the API body; the stored response still returns 201.
 
 **Key Files:**
 - `src/epitome-assessment/epitome-assessment.service.ts` — Transforms survey data and orchestrates the processing pipeline

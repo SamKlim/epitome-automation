@@ -9,18 +9,48 @@ import { getArchetypeLabel } from './archetype-label';
 /** Rankings run 1 ("fully describes me") to 4 ("does not describe me at all"). */
 const MAX_RANKING = 4;
 
+const TEMPLATE_FILENAME = 'epitome-assessment-sample.pdf';
+
+/**
+ * Where the template PDF can live, depending on how the code is being run:
+ * - `src/` when running under ts-jest, or `dist/src/` after `nest build` copies assets
+ * - the source tree sitting next to `dist/` on a deployment that keeps sources (Vercel)
+ */
+function templateCandidates(): string[] {
+  return [
+    path.resolve(__dirname, '..', TEMPLATE_FILENAME),
+    path.resolve(__dirname, '../../../src', TEMPLATE_FILENAME),
+  ];
+}
+
+export function resolveTemplatePath(exists: (file: string) => boolean = fs.existsSync): string {
+  const candidates = templateCandidates();
+  const found = candidates.find((candidate) => exists(candidate));
+  if (!found) {
+    throw new Error(
+      `Report template ${TEMPLATE_FILENAME} not found. Tried:\n  ${candidates.join('\n  ')}`,
+    );
+  }
+  return found;
+}
+
 @Injectable()
 export class EpitomeReportGeneratorService {
-  private templatePath = path.resolve(
-    __dirname,
-    '../epitome-assessment-sample.pdf'
-  );
+  private templatePath: string | undefined;
   private reportsDir = '/tmp/reports';
 
   constructor(private supabaseService: SupabaseService) {
     if (!fs.existsSync(this.reportsDir)) {
       fs.mkdirSync(this.reportsDir, { recursive: true });
     }
+  }
+
+  /** Resolved on first use, not at construction, so a missing template fails the request with a clear message. */
+  private getTemplatePath(): string {
+    if (!this.templatePath) {
+      this.templatePath = resolveTemplatePath();
+    }
+    return this.templatePath;
   }
 
   async createCustomisedReport(responseId: string): Promise<string> {
@@ -54,7 +84,7 @@ export class EpitomeReportGeneratorService {
     const archetypeLabel = getArchetypeLabel(data.archetype_scores);
 
     // Load template PDF
-    const pdfBuffer = fs.readFileSync(this.templatePath);
+    const pdfBuffer = fs.readFileSync(this.getTemplatePath());
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
     // Page 1: Replace client name
