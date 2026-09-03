@@ -10,7 +10,7 @@ import { ArchetypeScores } from './epitome-assessment.service';
 export class EpitomeReportGeneratorService {
   private templatePath = path.resolve(
     __dirname,
-    '../../../src/epitome-assessment-sample.pdf'
+    '../epitome-assessment-sample.pdf'
   );
   private reportsDir = '/tmp/reports';
 
@@ -45,6 +45,7 @@ export class EpitomeReportGeneratorService {
 
     // Transform responses array into dimension scores for radar chart
     const dimensionScores = this.transformResponsesToDimensionScores(data.responses);
+    console.log(`📊 Transformed dimension scores (${dimensionScores.length} dimensions):`, JSON.stringify(dimensionScores, null, 2));
 
     // Calculate archetype label from scores if not provided
     let archetypeLabel = data.archetype_label;
@@ -65,60 +66,8 @@ export class EpitomeReportGeneratorService {
     const page8 = pdfDoc.getPage(7);
     await this.replaceArchetypeLabel(page8, archetypeLabel, pdfDoc);
 
-    // CHART PLACEMENT LOGIC
-    // The radar chart is embedded in the bottom-left quadrant of page 8
-    // within a defined white box. The chart is dynamically sized (based on
-    // actual content bounds) and then scaled to fit within the box while
-    // maintaining its aspect ratio. The chart is centered both horizontally
-    // and vertically within the box for balanced visual presentation.
-
-    // Draw white rectangle boundary (bottom-left quadrant: 590×450)
-    page8.drawRectangle({
-      x: 0,
-      y: 0,
-      width: 590,
-      height: 450,
-      color: rgb(1, 1, 1),
-    });
-
-    // Generate radar chart PNG with actual user response data
-    const radarChartBuffer = await this.generateRadarChartSvg(dimensionScores);
-    const radarImage = await pdfDoc.embedPng(radarChartBuffer);
-
-    // Define the target box dimensions where chart will be placed
-    const boxWidth = 590;
-    const boxHeight = 450;
-    const boxX = 0;
-    const boxY = 0;
-
-    // Estimate chart aspect ratio based on typical dynamic generation
-    // (chart width to height ratio, approximately 1.4:1 from bounding box)
-    const estimatedAspectRatio = 1.4;
-
-    // Calculate scaled dimensions: fit chart within box maintaining aspect ratio
-    // Strategy: try width-first scaling, if height exceeds box, switch to height-first
-    let scaledWidth = boxWidth;
-    let scaledHeight = boxWidth / estimatedAspectRatio;
-
-    if (scaledHeight > boxHeight) {
-      // Height would exceed box, so constrain by height instead
-      scaledHeight = boxHeight;
-      scaledWidth = boxHeight * estimatedAspectRatio;
-    }
-
-    // Center the scaled chart both horizontally and vertically within the box
-    const chartX = boxX + (boxWidth - scaledWidth) / 2;
-    const chartY = boxY + (boxHeight - scaledHeight) / 2;
-
-    // Embed the radar chart image at calculated position and size
-    page8.drawImage(radarImage, {
-      x: chartX,
-      y: chartY,
-      width: scaledWidth,
-      height: scaledHeight,
-    });
-
-    console.log(`📊 Radar chart embedded: ${scaledWidth.toFixed(0)}×${scaledHeight.toFixed(0)} (centered in 590×450 box)`);
+    // Page 8: Embed radar chart
+    await this.embedRadarChartOnPage(page8, pdfDoc, dimensionScores);
 
     // Save the customized PDF
     const fileName = `epitome-report-${responseId}-customised.pdf`;
@@ -149,12 +98,21 @@ export class EpitomeReportGeneratorService {
         }
       });
 
+      const archetypes = ['Sovereign', 'Empress', 'Consort', 'Seductress'] as const;
+      for (const archetype of archetypes) {
+        if (!scores[archetype]) {
+          throw new Error(
+            `Missing score for ${archetype} in dimension "${response.dimension}". Response data is incomplete.`,
+          );
+        }
+      }
+
       return {
         dimension: response.dimension,
-        Sovereign: (scores.Sovereign || 1) as 1 | 2 | 3 | 4,
-        Empress: (scores.Empress || 1) as 1 | 2 | 3 | 4,
-        Consort: (scores.Consort || 1) as 1 | 2 | 3 | 4,
-        Seductress: (scores.Seductress || 1) as 1 | 2 | 3 | 4,
+        Sovereign: scores.Sovereign as 1 | 2 | 3 | 4,
+        Empress: scores.Empress as 1 | 2 | 3 | 4,
+        Consort: scores.Consort as 1 | 2 | 3 | 4,
+        Seductress: scores.Seductress as 1 | 2 | 3 | 4,
       };
     });
   }
@@ -271,6 +229,57 @@ export class EpitomeReportGeneratorService {
     }
   }
 
+  private async embedRadarChartOnPage(
+    page: PDFPage,
+    pdfDoc: PDFDocument,
+    dimensionScores: Array<{
+      dimension: string;
+      Sovereign: 1 | 2 | 3 | 4;
+      Empress: 1 | 2 | 3 | 4;
+      Consort: 1 | 2 | 3 | 4;
+      Seductress: 1 | 2 | 3 | 4;
+    }>,
+  ): Promise<void> {
+    // Draw white rectangle background (bottom-left quadrant: 590×450)
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: 590,
+      height: 450,
+      color: rgb(1, 1, 1),
+    });
+
+    // Generate radar chart PNG from dimension scores
+    const radarChartBuffer = await this.generateRadarChartSvg(dimensionScores);
+    const radarImage = await pdfDoc.embedPng(radarChartBuffer);
+
+    // Calculate scaled dimensions to fit within box while maintaining aspect ratio
+    const boxWidth = 590;
+    const boxHeight = 450;
+    const estimatedAspectRatio = 1.4;
+
+    let scaledWidth = boxWidth;
+    let scaledHeight = boxWidth / estimatedAspectRatio;
+
+    if (scaledHeight > boxHeight) {
+      scaledHeight = boxHeight;
+      scaledWidth = boxHeight * estimatedAspectRatio;
+    }
+
+    // Center chart both horizontally and vertically
+    const chartX = (boxWidth - scaledWidth) / 2;
+    const chartY = (boxHeight - scaledHeight) / 2;
+
+    page.drawImage(radarImage, {
+      x: chartX,
+      y: chartY,
+      width: scaledWidth,
+      height: scaledHeight,
+    });
+
+    console.log(`📊 Radar chart embedded: ${scaledWidth.toFixed(0)}×${scaledHeight.toFixed(0)} (centered in 590×450 box)`);
+  }
+
   private async replaceClientName(
     page: PDFPage,
     firstName: string,
@@ -341,7 +350,7 @@ export class EpitomeReportGeneratorService {
   }
 
   private async generateRadarChartSvg(
-    scoresByArchetype?: Array<{
+    scoresByArchetype: Array<{
       dimension: string;
       Sovereign: 1 | 2 | 3 | 4;
       Empress: 1 | 2 | 3 | 4;
@@ -349,30 +358,13 @@ export class EpitomeReportGeneratorService {
       Seductress: 1 | 2 | 3 | 4;
     }>,
   ): Promise<Buffer> {
-    const defaultData: Array<{
-      dimension: string;
-      Sovereign: 1 | 2 | 3 | 4;
-      Empress: 1 | 2 | 3 | 4;
-      Consort: 1 | 2 | 3 | 4;
-      Seductress: 1 | 2 | 3 | 4;
-    }> = [
-      { dimension: 'Leading', Sovereign: 4, Empress: 1, Consort: 2, Seductress: 3 },
-      { dimension: 'Trust', Sovereign: 2, Empress: 4, Consort: 1, Seductress: 3 },
-      { dimension: 'Constraints', Sovereign: 1, Empress: 3, Consort: 4, Seductress: 2 },
-      { dimension: 'Inspiration', Sovereign: 3, Empress: 2, Consort: 1, Seductress: 4 },
-      { dimension: 'Managing Challenges', Sovereign: 4, Empress: 2, Consort: 3, Seductress: 1 },
-      { dimension: 'Others View Me', Sovereign: 2, Empress: 3, Consort: 4, Seductress: 1 },
-      { dimension: 'Striving', Sovereign: 3, Empress: 4, Consort: 2, Seductress: 1 },
-      { dimension: 'Working With Peers', Sovereign: 1, Empress: 2, Consort: 4, Seductress: 3 },
-      { dimension: 'At Your Worst', Sovereign: 2, Empress: 1, Consort: 3, Seductress: 4 },
-      { dimension: 'Confidence', Sovereign: 4, Empress: 3, Consort: 1, Seductress: 2 },
-      { dimension: 'Power', Sovereign: 3, Empress: 4, Consort: 1, Seductress: 2 },
-      { dimension: 'Ambition', Sovereign: 4, Empress: 2, Consort: 1, Seductress: 3 },
-    ];
+    if (!scoresByArchetype || scoresByArchetype.length === 0) {
+      throw new Error('Cannot generate radar chart: no dimension scores provided. Response data may be malformed.');
+    }
 
-    const data = scoresByArchetype || defaultData;
-    this.validateScoreData(data);
-    const svgString = this.generateRadarChartSvgString(data);
+    this.validateScoreData(scoresByArchetype);
+    console.log(`📊 Radar chart generated with real data (${scoresByArchetype.length} dimensions)`);
+    const svgString = this.generateRadarChartSvgString(scoresByArchetype);
 
     const pngBuffer = await sharp(Buffer.from(svgString)).png().toBuffer();
     return pngBuffer;

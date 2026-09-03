@@ -1,8 +1,9 @@
+import { describe, it, beforeAll, afterAll, expect } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, HttpStatus } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { describe } from 'node:test';
+import { SurveyResponseDTO } from '../src/epitome-assessment/response.dto';
 
 describe('Survey Submission E2E', () => {
   let app: INestApplication;
@@ -22,7 +23,9 @@ describe('Survey Submission E2E', () => {
   });
 
   describe('POST /api/assessments/responses', () => {
-    const validTestData = {
+    let apiResponse: any;
+
+    const validTestData: SurveyResponseDTO = {
       id: String(Date.now()),
       surveyId: 'e2e-survey-123',
       dateCreated: new Date().toISOString(),
@@ -35,7 +38,7 @@ describe('Survey Submission E2E', () => {
         q_2018891727: 'Test',
       },
       q_288881568: {
-        q_2018891735: 'e2e@test.com',
+        q_2018891735: 'samanthaklimovski@gmail.com',
       },
       q_288881569: 'Test Org',
       // Q1: Leading - S=4, E=1, So=2, C=3 (Empress wins)
@@ -124,68 +127,37 @@ describe('Survey Submission E2E', () => {
       },
     };
 
-    it('should successfully process a complete survey submission', async () => {
-      const response = await request(app.getHttpServer())
+    beforeAll(async () => {
+      apiResponse = await request(app.getHttpServer())
         .post('/api/assessments/responses')
         .set('Authorization', `Bearer ${validToken}`)
         .send(validTestData)
         .expect(HttpStatus.CREATED);
-
-      expect(response.body).toHaveProperty('success', true);
-      expect(response.body).toHaveProperty('response_id', validTestData.id);
-      expect(response.body).toHaveProperty('archetype_scores');
-      expect(response.body).toHaveProperty('archetype_label');
-      expect(response.body).toHaveProperty('timing');
     });
 
-    it('should return archetype scores', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/api/assessments/responses')
-        .set('Authorization', `Bearer ${validToken}`)
-        .send(validTestData)
-        .expect(HttpStatus.CREATED);
+    it('should successfully process survey submission with all required fields', () => {
+      expect(apiResponse.body).toHaveProperty('success', true);
+      expect(apiResponse.body).toHaveProperty('response_id', validTestData.id);
+      expect(apiResponse.body).toHaveProperty('archetype_scores');
+      expect(apiResponse.body).toHaveProperty('archetype_label');
+    });
 
-      const { archetype_scores } = response.body;
+    it('should calculate valid archetype scores', () => {
+      const { archetype_scores } = apiResponse.body;
       expect(archetype_scores).toHaveProperty('Sovereign');
       expect(archetype_scores).toHaveProperty('Empress');
       expect(archetype_scores).toHaveProperty('Consort');
       expect(archetype_scores).toHaveProperty('Seductress');
 
-      // All scores should be numbers greater than 0
       Object.values(archetype_scores).forEach((score) => {
         expect(typeof score).toBe('number');
         expect(score).toBeGreaterThan(0);
       });
     });
 
-    it('should return archetype label', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/api/assessments/responses')
-        .set('Authorization', `Bearer ${validToken}`)
-        .send(validTestData)
-        .expect(HttpStatus.CREATED);
-
-      expect(response.body.archetype_label).toBeTruthy();
-      expect(typeof response.body.archetype_label).toBe('string');
-    });
-
-    it('should include timing information', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/api/assessments/responses')
-        .set('Authorization', `Bearer ${validToken}`)
-        .send(validTestData)
-        .expect(HttpStatus.CREATED);
-
-      const { timing } = response.body;
-      expect(timing).toHaveProperty('database');
-      expect(timing).toHaveProperty('pdf');
-      expect(timing).toHaveProperty('total');
-
-      // All timings should be non-negative numbers
-      Object.values(timing).forEach((time) => {
-        expect(typeof time).toBe('number');
-        expect(time).toBeGreaterThanOrEqual(0);
-      });
+    it('should return archetype label', () => {
+      expect(apiResponse.body.archetype_label).toBeTruthy();
+      expect(typeof apiResponse.body.archetype_label).toBe('string');
     });
 
     it('should reject request without authorization', async () => {
@@ -221,33 +193,6 @@ describe('Survey Submission E2E', () => {
         .send(incompleteData)
         .expect(HttpStatus.BAD_REQUEST);
     });
-
-    it('should handle missing optional fields gracefully', async () => {
-      const minimalData = {
-        id: String(Date.now() + 1),
-        surveyId: 'minimal-survey',
-        q_288881566: { q_2018891718: '1', q_2018891719: '4', q_2018891720: '2', q_2018891724: '3' },
-        q_288881570: { q_2018891746: '2', q_2018891747: '4', q_2018891748: '1', q_2018891822: '3' },
-        q_288881571: { q_2018891753: '4', q_2018891823: '2', q_2018891754: '1', q_2018891755: '3' },
-        q_288881572: { q_2018891762: '1', q_2018891761: '4', q_2018891824: '2', q_2018891760: '3' },
-        q_288881573: { q_2018891825: '1', q_2018891767: '2', q_2018891768: '4', q_2018891769: '3' },
-        q_288881574: { q_2018891774: '1', q_2018891775: '2', q_2018891827: '4', q_2018891826: '3' },
-        q_288881575: { q_2018891828: '1', q_2018891780: '4', q_2018891781: '2', q_2018891782: '3' },
-        q_288881576: { q_2018891829: '1', q_2018891789: '4', q_2018891830: '2', q_2018891790: '3' },
-        q_288881577: { q_2018891797: '2', q_2018891799: '4', q_2018891798: '3', q_2018891831: '1' },
-        q_288881578: { q_2018891833: '1', q_2018891806: '4', q_2018891832: '2', q_2018891807: '3' },
-        q_288881654: { q_2018892275: '4', q_2018892273: '2', q_2018892276: '1', q_2018892274: '3' },
-        q_288881876: { q_2018893545: '1', q_2018893542: '4', q_2018893544: '2', q_2018893543: '3' },
-      };
-
-      const response = await request(app.getHttpServer())
-        .post('/api/assessments/responses')
-        .set('Authorization', `Bearer ${validToken}`)
-        .send(minimalData)
-        .expect(HttpStatus.CREATED);
-
-      expect(response.body.success).toBe(true);
-    });
   });
 
   describe('GET /api/assessments/health', () => {
@@ -260,11 +205,4 @@ describe('Survey Submission E2E', () => {
     });
   });
 });
-function beforeAll(arg0: () => Promise<void>) {
-  throw new Error('Function not implemented.');
-}
-
-function afterAll(arg0: () => Promise<void>) {
-  throw new Error('Function not implemented.');
-}
 

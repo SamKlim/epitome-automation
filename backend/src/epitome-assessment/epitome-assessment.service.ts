@@ -56,33 +56,26 @@ export class EpitomeAssessmentService {
   }
 
   async processResponse(rawResponse: any) {
-    const startTime = Date.now();
-    const timings: Record<string, number> = {};
-
     this.logger.log(`Received assessment response (ID: ${rawResponse.id})`);
 
     const transformed = this.transformResponse(rawResponse);
 
     // Step 1: Store in Supabase
-    const dbStart = Date.now();
     try {
       await this.supabaseService.insertSurveyResponse(transformed);
-      timings.database = Date.now() - dbStart;
-      this.logger.log(`✅ Stored in Supabase: ${transformed.response_id} (${timings.database}ms)`);
+      this.logger.log(`✅ Stored in Supabase: ${transformed.response_id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown database error';
       throw new Error(`Failed to store response: ${message}`);
     }
 
     // Step 2: Generate Report (fetches name and archetype from Supabase)
-    const reportStart = Date.now();
     let reportPath: string;
     try {
       reportPath = await this.reportGeneratorService.createCustomisedReport(
         transformed.response_id,
       );
-      timings.report = Date.now() - reportStart;
-      this.logger.log(`✅ Report generated and saved temporarily (${timings.report}ms)`);
+      this.logger.log(`✅ Report generated and saved temporarily`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : '';
@@ -110,19 +103,16 @@ export class EpitomeAssessmentService {
       }
     }
 
-    const totalTime = Date.now() - startTime;
-    this.logger.log(`✅ Assessment ${transformed.response_id} processed (${totalTime}ms total)`);
+    this.logger.log(`✅ Assessment ${transformed.response_id} processed`);
+
+    const archetypeLabel = this.getArchetypeLabel(transformed.archetype_scores);
 
     return {
       success: true,
       response_id: transformed.response_id,
       message: 'Assessment response processed successfully',
       archetype_scores: transformed.archetype_scores,
-      timing: {
-        database: timings.database || 0,
-        report: timings.report || 0,
-        total: totalTime,
-      },
+      archetype_label: archetypeLabel,
     };
   }
 
@@ -198,6 +188,21 @@ export class EpitomeAssessmentService {
     return responses;
   }
 
+  private getArchetypeLabel(archetypeScores: ArchetypeScores): string {
+    const entries = [
+      { name: 'Sovereign', score: archetypeScores.Sovereign },
+      { name: 'Empress', score: archetypeScores.Empress },
+      { name: 'Consort', score: archetypeScores.Consort },
+      { name: 'Seductress', score: archetypeScores.Seductress },
+    ];
+
+    const sorted = entries.sort((a, b) => b.score - a.score);
+    const highestScore = sorted[0].score;
+    const leadingArchetypes = sorted.filter((e) => e.score >= highestScore - 2);
+
+    return leadingArchetypes.map((e) => e.name).join(' and ');
+  }
+
   private async sendEmailReportInBackground(
     email: string,
     firstName: string,
@@ -210,10 +215,8 @@ export class EpitomeAssessmentService {
 
     while (attempt <= maxRetries) {
       try {
-        const result = await this.sendEmailReport(email, firstName, lastName, reportPath);
-        this.logger.log(
-          `[${responseId}] Email sent to ${email} on attempt ${attempt} in ${result.time}ms`,
-        );
+        await this.sendEmailReport(email, firstName, lastName, reportPath);
+        this.logger.log(`[${responseId}] Email sent to ${email} on attempt ${attempt}`);
         return;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -241,8 +244,7 @@ export class EpitomeAssessmentService {
     firstName: string,
     lastName: string,
     reportPath: string,
-  ): Promise<{ success: boolean; time: number }> {
-    const startTime = Date.now();
+  ): Promise<void> {
 
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       throw new Error('Gmail credentials not configured');
@@ -295,9 +297,6 @@ HM Singer<br/>
     };
 
     await this.transporter.sendMail(mailOptions);
-    const duration = Date.now() - startTime;
-
-    this.logger.log(`Email sent to ${email} in ${duration}ms`);
-    return { success: true, time: duration };
+    this.logger.log(`Email sent to ${email}`);
   }
 }

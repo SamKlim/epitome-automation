@@ -16,16 +16,15 @@
       "internalConsoleOptions": "neverOpen"
     },
     {
-      "name": "Test Email Flow",
+      "name": "Test End to End Flow",
       "type": "node",
       "request": "launch",
-      "preLaunchTask": "compile-test-email",
-      "program": "${workspaceFolder}/backend/test-email-flow.js",
+      "program": "${workspaceFolder}/backend/node_modules/.bin/jest",
+      "args": ["--testPathPatterns=e2e", "--forceExit", "--runInBand"],
       "cwd": "${workspaceFolder}/backend",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "sourceMap": true,
-      "sourceMaps": true,
       "skipFiles": ["<node_internals>/**"]
     }
   ]
