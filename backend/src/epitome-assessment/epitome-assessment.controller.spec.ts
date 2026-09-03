@@ -2,9 +2,24 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { EpitomeAssessmentController } from './epitome-assessment.controller';
 import { EpitomeAssessmentService } from './epitome-assessment.service';
-import { TransformService } from './transform.service';
-import { ArchetypeLabelService } from './archetype-label.service';
-import { SupabaseService } from '../db/supabase.service';
+import { EpitomeReportGeneratorService } from './epitome-report-generator.service';
+import { SupabaseService } from '../db-supabase/supabase.service';
+import * as fs from 'fs';
+
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn().mockReturnValue({
+    sendMail: jest.fn().mockResolvedValue({ messageId: 'test-message-id' }),
+  }),
+}));
+
+jest.mock('fs');
+jest.mock('sharp', () => {
+  return jest.fn().mockReturnValue({
+    png: jest.fn().mockReturnValue({
+      toBuffer: jest.fn().mockResolvedValue(Buffer.from([0x89, 0x50, 0x4e, 0x47])),
+    }),
+  });
+});
 
 describe('EpitomeAssessmentController', () => {
   let controller: EpitomeAssessmentController;
@@ -104,8 +119,12 @@ describe('EpitomeAssessmentController', () => {
   };
 
   beforeEach(async () => {
-    // Set up environment variable for bearer token validation
+    // Set up environment variables
     process.env.EPITOME_AUTOMATION_SECRET = VALID_TOKEN;
+    process.env.GMAIL_USER = 'test@gmail.com';
+    process.env.GMAIL_APP_PASSWORD = 'test-password-123';
+
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
 
     mockSupabaseService = {
       insertSurveyResponse: jest
@@ -113,12 +132,20 @@ describe('EpitomeAssessmentController', () => {
         .mockResolvedValue([{ response_id: 'test-response-123' }]),
     };
 
+    const mockReportGeneratorService = {
+      createCustomisedReport: jest
+        .fn()
+        .mockResolvedValue('/tmp/reports/epitome-report-test-response-123-customised.pdf'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EpitomeAssessmentController],
       providers: [
         EpitomeAssessmentService,
-        TransformService,
-        ArchetypeLabelService,
+        {
+          provide: EpitomeReportGeneratorService,
+          useValue: mockReportGeneratorService,
+        },
         {
           provide: SupabaseService,
           useValue: mockSupabaseService,
@@ -141,7 +168,7 @@ describe('EpitomeAssessmentController', () => {
       expect(result.message).toContain('successfully');
     });
 
-    it('should return archetype_scores and archetype_label in response', async () => {
+    it('should return archetype_scores in response', async () => {
       const result = await controller.submitResponse(validResponse, `Bearer ${VALID_TOKEN}`);
 
       expect(result.archetype_scores).toBeDefined();
@@ -149,8 +176,6 @@ describe('EpitomeAssessmentController', () => {
       expect(result.archetype_scores).toHaveProperty('Empress');
       expect(result.archetype_scores).toHaveProperty('Consort');
       expect(result.archetype_scores).toHaveProperty('Seductress');
-      expect(result.archetype_label).toBeDefined();
-      expect(typeof result.archetype_label).toBe('string');
     });
 
     it('should call supabaseService.insertSurveyResponse', async () => {

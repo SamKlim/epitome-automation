@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "compile-test-email",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/backend && npx tsc test-email-flow.ts --outDir . --sourceMap --module commonjs --target es2020 --esModuleInterop",
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}

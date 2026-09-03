@@ -72,6 +72,7 @@ export class EpitomeAssessmentController {
       throw new HttpException(
         {
           error: 'Failed to process assessment',
+          message: errorMessage,
           details: errorMessage,
           ...(process.env.NODE_ENV === 'development' && { stack: errorStack }),
         },

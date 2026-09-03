@@ -1,4 +1,6 @@
 export class SurveyResponseDTO {
+  [key: string]: any;
+
   /** Unique response ID from SurveyMonkey (required) */
   id!: string;
 

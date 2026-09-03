@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+  
+    {
+      "name": "Backend Dev",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/node_modules/.bin/nest",
+      "args": ["start", "--watch"],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "cwd": "${workspaceFolder}/backend",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Test Email Flow",
+      "type": "node",
+      "request": "launch",
+      "preLaunchTask": "compile-test-email",
+      "program": "${workspaceFolder}/backend/test-email-flow.js",
+      "cwd": "${workspaceFolder}/backend",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "sourceMap": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

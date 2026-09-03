@@ -2,14 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import * as fs from 'fs';
 import * as path from 'path';
-import { generateRadarChartSvg } from '../radarChart-svg';
-import { SupabaseService } from '../db/supabase.service';
+import sharp from 'sharp';
+import { SupabaseService } from '../db-supabase/supabase.service';
+import { ArchetypeScores } from './epitome-assessment.service';
 
 @Injectable()
-export class PdfGeneratorService {
+export class EpitomeReportGeneratorService {
   private templatePath = path.resolve(
     __dirname,
-    '../../../src/templates/epitome-template.pdf'
+    '../../../src/epitome-assessment-sample.pdf'
   );
   private reportsDir = '/tmp/reports';
 
@@ -42,25 +43,13 @@ export class PdfGeneratorService {
     const firstName = data.first_name || 'Unknown';
     const lastName = data.last_name || 'Unknown';
 
+    // Transform responses array into dimension scores for radar chart
+    const dimensionScores = this.transformResponsesToDimensionScores(data.responses);
+
     // Calculate archetype label from scores if not provided
     let archetypeLabel = data.archetype_label;
     if (!archetypeLabel && data.archetype_scores) {
-      const scores = data.archetype_scores as Record<string, number>;
-
-      // Find top two archetypes
-      const sortedArchetypes = Object.entries(scores)
-        .sort((a, b) => b[1] - a[1])
-        .map(([name]) => name);
-
-      const topScore = scores[sortedArchetypes[0]];
-      const secondScore = scores[sortedArchetypes[1]];
-
-      // If top two are within 5 points, show both; otherwise show top only
-      if (Math.abs(topScore - secondScore) <= 5) {
-        archetypeLabel = `${sortedArchetypes[0]} and ${sortedArchetypes[1]}`;
-      } else {
-        archetypeLabel = sortedArchetypes[0];
-      }
+      archetypeLabel = this.getArchetypeLabel(data.archetype_scores);
     }
     archetypeLabel = archetypeLabel || 'Unknown';
 
@@ -92,8 +81,8 @@ export class PdfGeneratorService {
       color: rgb(1, 1, 1),
     });
 
-    // Generate radar chart PNG with dynamic bounding box (no padding)
-    const radarChartBuffer = await generateRadarChartSvg();
+    // Generate radar chart PNG with actual user response data
+    const radarChartBuffer = await this.generateRadarChartSvg(dimensionScores);
     const radarImage = await pdfDoc.embedPng(radarChartBuffer);
 
     // Define the target box dimensions where chart will be placed
@@ -142,6 +131,48 @@ export class PdfGeneratorService {
     return filePath;
   }
 
+
+  private transformResponsesToDimensionScores(
+    responses: any[],
+  ): Array<{ dimension: string; Sovereign: 1 | 2 | 3 | 4; Empress: 1 | 2 | 3 | 4; Consort: 1 | 2 | 3 | 4; Seductress: 1 | 2 | 3 | 4 }> {
+    return responses.map((response) => {
+      const scores: Record<string, number> = {
+        Sovereign: 0,
+        Empress: 0,
+        Consort: 0,
+        Seductress: 0,
+      };
+
+      response.answers.forEach((answer: any) => {
+        if (answer.archetype && answer.ranking !== null) {
+          scores[answer.archetype] = answer.ranking;
+        }
+      });
+
+      return {
+        dimension: response.dimension,
+        Sovereign: (scores.Sovereign || 1) as 1 | 2 | 3 | 4,
+        Empress: (scores.Empress || 1) as 1 | 2 | 3 | 4,
+        Consort: (scores.Consort || 1) as 1 | 2 | 3 | 4,
+        Seductress: (scores.Seductress || 1) as 1 | 2 | 3 | 4,
+      };
+    });
+  }
+
+  private getArchetypeLabel(archetypeScores: ArchetypeScores): string {
+    const entries = [
+      { name: 'Sovereign', score: archetypeScores.Sovereign },
+      { name: 'Empress', score: archetypeScores.Empress },
+      { name: 'Consort', score: archetypeScores.Consort },
+      { name: 'Seductress', score: archetypeScores.Seductress },
+    ];
+
+    const sorted = entries.sort((a, b) => a.score - b.score);
+    const lowestScore = sorted[0].score;
+    const leadingArchetypes = sorted.filter((e) => e.score <= lowestScore + 2);
+
+    return leadingArchetypes.map((e) => e.name).join(' and ');
+  }
 
   private async replaceArchetypeLabel(
     page: PDFPage,
@@ -307,5 +338,226 @@ export class PdfGeneratorService {
       font,
       color: rgb(0, 0, 0), // Black text
     });
+  }
+
+  private async generateRadarChartSvg(
+    scoresByArchetype?: Array<{
+      dimension: string;
+      Sovereign: 1 | 2 | 3 | 4;
+      Empress: 1 | 2 | 3 | 4;
+      Consort: 1 | 2 | 3 | 4;
+      Seductress: 1 | 2 | 3 | 4;
+    }>,
+  ): Promise<Buffer> {
+    const defaultData: Array<{
+      dimension: string;
+      Sovereign: 1 | 2 | 3 | 4;
+      Empress: 1 | 2 | 3 | 4;
+      Consort: 1 | 2 | 3 | 4;
+      Seductress: 1 | 2 | 3 | 4;
+    }> = [
+      { dimension: 'Leading', Sovereign: 4, Empress: 1, Consort: 2, Seductress: 3 },
+      { dimension: 'Trust', Sovereign: 2, Empress: 4, Consort: 1, Seductress: 3 },
+      { dimension: 'Constraints', Sovereign: 1, Empress: 3, Consort: 4, Seductress: 2 },
+      { dimension: 'Inspiration', Sovereign: 3, Empress: 2, Consort: 1, Seductress: 4 },
+      { dimension: 'Managing Challenges', Sovereign: 4, Empress: 2, Consort: 3, Seductress: 1 },
+      { dimension: 'Others View Me', Sovereign: 2, Empress: 3, Consort: 4, Seductress: 1 },
+      { dimension: 'Striving', Sovereign: 3, Empress: 4, Consort: 2, Seductress: 1 },
+      { dimension: 'Working With Peers', Sovereign: 1, Empress: 2, Consort: 4, Seductress: 3 },
+      { dimension: 'At Your Worst', Sovereign: 2, Empress: 1, Consort: 3, Seductress: 4 },
+      { dimension: 'Confidence', Sovereign: 4, Empress: 3, Consort: 1, Seductress: 2 },
+      { dimension: 'Power', Sovereign: 3, Empress: 4, Consort: 1, Seductress: 2 },
+      { dimension: 'Ambition', Sovereign: 4, Empress: 2, Consort: 1, Seductress: 3 },
+    ];
+
+    const data = scoresByArchetype || defaultData;
+    this.validateScoreData(data);
+    const svgString = this.generateRadarChartSvgString(data);
+
+    const pngBuffer = await sharp(Buffer.from(svgString)).png().toBuffer();
+    return pngBuffer;
+  }
+
+  private validateScoreData(
+    data: Array<{
+      dimension: string;
+      Sovereign: 1 | 2 | 3 | 4;
+      Empress: 1 | 2 | 3 | 4;
+      Consort: 1 | 2 | 3 | 4;
+      Seductress: 1 | 2 | 3 | 4;
+    }>,
+  ): void {
+    if (!Array.isArray(data)) {
+      throw new Error('Data must be an array of DimensionScores');
+    }
+
+    data.forEach((item, index) => {
+      if (!item.dimension || typeof item.dimension !== 'string') {
+        throw new Error(`Item ${index}: dimension must be a non-empty string`);
+      }
+
+      const validArchetypes = ['Sovereign', 'Empress', 'Consort', 'Seductress'] as const;
+      validArchetypes.forEach((archetype) => {
+        const score = item[archetype as keyof typeof item] as number;
+        if (score === undefined || score === null) {
+          throw new Error(`Item ${index} (${item.dimension}): missing score for ${archetype}`);
+        }
+        if (![1, 2, 3, 4].includes(score as 1 | 2 | 3 | 4)) {
+          throw new Error(
+            `Item ${index} (${item.dimension}): ${archetype} score must be 1-4, got ${score}`,
+          );
+        }
+      });
+    });
+  }
+
+  private generateRadarChartSvgString(
+    data: Array<{
+      dimension: string;
+      Sovereign: 1 | 2 | 3 | 4;
+      Empress: 1 | 2 | 3 | 4;
+      Consort: 1 | 2 | 3 | 4;
+      Seductress: 1 | 2 | 3 | 4;
+    }>,
+  ): string {
+    const ARCHETYPES = ['Sovereign', 'Empress', 'Consort', 'Seductress'];
+    const COLORS = {
+      Sovereign: '#0B6889',
+      Empress: '#603393',
+      Consort: '#E7BF20',
+      Seductress: '#C12026',
+    };
+
+    const numDimensions = data.length;
+    const maxRadius = 380;
+    const labelDistance = maxRadius + 55;
+    const angleSlice = (Math.PI * 2) / numDimensions;
+    const fontSize = 26;
+
+    let tempCenterX = 1000;
+    let tempCenterY = 1000;
+
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity;
+
+    for (let i = 1; i <= 4; i++) {
+      const radius = (maxRadius / 4) * i;
+      minX = Math.min(minX, tempCenterX - radius);
+      maxX = Math.max(maxX, tempCenterX + radius);
+      minY = Math.min(minY, tempCenterY - radius);
+      maxY = Math.max(maxY, tempCenterY + radius);
+    }
+
+    data.forEach((dim, i) => {
+      const angle = angleSlice * i - Math.PI / 2;
+      const labelX = tempCenterX + labelDistance * Math.cos(angle);
+      const labelY = tempCenterY + labelDistance * Math.sin(angle);
+
+      const textWidth = dim.dimension.length * (fontSize * 0.5);
+      const textHeight = fontSize;
+
+      let textMinX = labelX - textWidth / 2;
+      let textMaxX = labelX + textWidth / 2;
+
+      if (Math.cos(angle) > 0.3) {
+        textMinX = labelX;
+        textMaxX = labelX + textWidth;
+      } else if (Math.cos(angle) < -0.3) {
+        textMinX = labelX - textWidth;
+        textMaxX = labelX;
+      }
+
+      minX = Math.min(minX, textMinX);
+      maxX = Math.max(maxX, textMaxX);
+      minY = Math.min(minY, labelY - textHeight / 2);
+      maxY = Math.max(maxY, labelY + textHeight / 2);
+    });
+
+    const padding = 20;
+    minX -= padding;
+    maxX += padding;
+    minY -= padding;
+    maxY += padding;
+
+    const canvasWidth = Math.ceil(maxX - minX);
+    const canvasHeight = Math.ceil(maxY - minY);
+    const offsetX = -minX;
+    const offsetY = -minY;
+    const centerX = tempCenterX + offsetX;
+    const centerY = tempCenterY + offsetY;
+
+    const svgElements: string[] = [];
+    svgElements.push(`<rect width="${canvasWidth}" height="${canvasHeight}" fill="white" />`);
+
+    for (let i = 1; i <= 4; i++) {
+      const radius = (maxRadius / 4) * i;
+      svgElements.push(
+        `<circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="#999999" stroke-width="1" />`,
+      );
+    }
+
+    const points: { [archetype: string]: { x: number; y: number }[] } = {
+      Sovereign: [],
+      Empress: [],
+      Consort: [],
+      Seductress: [],
+    };
+
+    data.forEach((dim, i) => {
+      const angle = angleSlice * i - Math.PI / 2;
+      const x = centerX + maxRadius * Math.cos(angle);
+      const y = centerY + maxRadius * Math.sin(angle);
+
+      svgElements.push(
+        `<line x1="${centerX}" y1="${centerY}" x2="${x}" y2="${y}" stroke="#cccccc" stroke-width="3" />`,
+      );
+
+      const labelX = centerX + labelDistance * Math.cos(angle);
+      const labelY = centerY + labelDistance * Math.sin(angle);
+
+      let textAnchor = 'middle';
+      if (Math.cos(angle) > 0.3) {
+        textAnchor = 'start';
+      } else if (Math.cos(angle) < -0.3) {
+        textAnchor = 'end';
+      }
+
+      svgElements.push(
+        `<text x="${labelX}" y="${labelY}" font-size="${fontSize}" font-family="Helvetica" text-anchor="${textAnchor}" dominant-baseline="middle" fill="black">${dim.dimension}</text>`,
+      );
+
+      ARCHETYPES.forEach((archetype) => {
+        const score = dim[archetype as keyof typeof dim] as number;
+        const radius = (maxRadius / 4) * score;
+        const pointX = centerX + radius * Math.cos(angle);
+        const pointY = centerY + radius * Math.sin(angle);
+        points[archetype].push({ x: pointX, y: pointY });
+      });
+    });
+
+    ARCHETYPES.forEach((archetype) => {
+      const archetypePoints = points[archetype];
+      const pointsString = archetypePoints.map((p) => `${p.x},${p.y}`).join(' ');
+
+      svgElements.push(
+        `<polygon points="${pointsString}" fill="none" stroke="${COLORS[archetype as keyof typeof COLORS]}" stroke-width="5" />`,
+      );
+
+      archetypePoints.forEach((point) => {
+        svgElements.push(
+          `<circle cx="${point.x}" cy="${point.y}" r="11" fill="${COLORS[archetype as keyof typeof COLORS]}" />`,
+        );
+      });
+    });
+
+    const svgString = `
+    <svg width="${canvasWidth}" height="${canvasHeight}" xmlns="http://www.w3.org/2000/svg">
+      ${svgElements.join('\n      ')}
+    </svg>
+  `;
+
+    return svgString;
   }
 }

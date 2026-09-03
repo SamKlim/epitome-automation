@@ -1,98 +1,120 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Epitome Assessment Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Survey response processing, archetype calculation, and PDF report generation for the Epitome Assessment.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Core Concepts
 
-## Description
+### Survey Ranking System
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**Critical:** The 1-4 ranking scale is the foundation of all calculations.
 
-## Project setup
+- Users rank 4 statements per question
+- **1 = "Fully describes me"** (highest weight)
+- **4 = "Does not describe me at all"** (lowest weight)
+- Each statement is associated with an archetype (Sovereign, Empress, Consort, Seductress)
 
-```bash
-$ npm install
-```
+**Data flow:**
+1. User rates statements 1-4 in SurveyMonkey
+2. Data is submitted to `/api/assessments/responses` endpoint
+3. Rankings are stored in Supabase **exactly as received** (1 stays 1, 4 stays 4)
+4. Archetype scores are calculated by summing rankings: higher ranking = higher contribution to that archetype's score
 
-## Compile and run the project
+**Example:**
+- Question has 4 statements tied to different archetypes
+- User ranks them: Sovereign=1, Empress=3, Consort=2, Seductress=4
+- These become Archetype scores for this question: Sovereign gets +1, Empress gets +3, Consort gets +2, Seductress gets +4
+- Total archetype scores accumulate across all 12 questions
 
-```bash
-# development
-$ npm run start
+### Data Processing Flow
 
-# watch mode
-$ npm run start:dev
+1. **Transform** (`TransformService`): Raw SurveyMonkey data → structured response with archetype scores
+2. **Store** (`SupabaseService`): Store transformed data including individual rankings and total scores
+3. **Label** (`ArchetypeLabelService`): Determine which archetype(s) to highlight
+4. **Generate PDF** (`PdfGeneratorService`): Create report with name, archetype label, and radar chart
+5. **Send Email** (`EmailService`): Deliver PDF to user
 
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+## Project Setup
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Running the Application
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Development with watch mode
+npm run start:dev
+
+# Production
+npm run start:prod
+
+# Debug mode (with breakpoints)
+npm run start:debug
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Testing
 
-## Resources
+### Unit Tests
 
-Check out a few resources that may come in handy when working with NestJS:
+Run unit tests to validate individual services and utilities:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+npm run test
+```
 
-## Support
+### Unit Tests with Debugger
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Run unit tests with breakpoints for debugging:
 
-## Stay in touch
+```bash
+npm run test:debug
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### E2E Tests
 
-## License
+Run end-to-end tests that validate the complete survey submission pipeline:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+npm run test:e2e
+```
+
+The test suite ([survey-submission.e2e.spec.ts](./tests/survey-submission.e2e.spec.ts)) validates:
+- Complete survey submission with archetype score calculation
+- Authorization (valid token required via `EPITOME_AUTOMATION_SECRET`)
+- Response structure includes `archetype_scores`, `archetype_label`, and `timing` data
+- Error handling (malformed requests, missing fields, unauthorized access)
+- Handling of optional fields and minimal data requirements
+
+### Coverage Report
+
+Generate a code coverage report for all tests:
+
+```bash
+npm run test:cov
+```
+
+## Key Files
+
+- `src/epitome-assessment/` — Main processing logic
+  - `transform.service.ts` — Converts raw survey data, calculates archetype scores
+  - `pdf-generator.service.ts` — Generates customized PDF reports
+  - `archetype-label.service.ts` — Determines leading archetype(s)
+- `src/radarChart-svg.ts` — Radar chart SVG generation with actual user scores
+- `src/db/supabase.service.ts` — Database operations
+
+## Database Schema
+
+`survey_responses` table stores:
+- `response_id`, `survey_id`, timestamps
+- `first_name`, `last_name`, `email`, `organization`
+- `archetype_scores`: `{ Sovereign: X, Empress: Y, Consort: Z, Seductress: W }`
+- `responses`: Array of dimensions with individual rankings per archetype
+
+## Verification Checklist
+
+When updating score calculation logic:
+- [ ] Rankings stored in DB match SurveyMonkey (1 = high weight, 4 = low weight)
+- [ ] Archetype scores sum up correctly across 12 dimensions
+- [ ] Radar chart uses actual user rankings, not test data
+- [ ] PDF displays correct archetype label based on scores
+- [ ] Email contains the personalized PDF with correct data

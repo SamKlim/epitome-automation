@@ -1,6 +1,0 @@
-requests
-openpyxl
-matplotlib
-pillow
-reportlab
-pypdf
