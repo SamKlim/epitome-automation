@@ -23,6 +23,19 @@ Code review → compile → tests → MEMORY (if warranted) → BUILD_JOURNAL (i
 - Outline changes before writing code, then wait for approval
 - No large decisions made silently
 
+## Data Integrity
+
+**No default or dummy data for survey responses.** If we cannot generate an accurate output (PDF, radar chart, scores) from real user data:
+- Throw an error immediately
+- Do not send the report/email
+- Return the error to the API caller
+
+Sending reports with incorrect data is worse than sending no report. Silent fallbacks mask data corruption.
+
+## Architecture & Documentation
+
+For data flow, system architecture, services, and ranking logic, see [backend/README.md](backend/README.md).
+
 ## Reference folder
 
 The `reference/` folder contains Merle's epitome-automation repo. Explore it to understand patterns, but this project builds its own solution.

@@ -4,7 +4,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import sharp from 'sharp';
 import { SupabaseService } from '../db-supabase/supabase.service';
-import { ArchetypeScores } from './epitome-assessment.service';
+import { getArchetypeLabel } from './archetype-label';
+
+/** Rankings run 1 ("fully describes me") to 4 ("does not describe me at all"). */
+const MAX_RANKING = 4;
 
 @Injectable()
 export class EpitomeReportGeneratorService {
@@ -45,14 +48,10 @@ export class EpitomeReportGeneratorService {
 
     // Transform responses array into dimension scores for radar chart
     const dimensionScores = this.transformResponsesToDimensionScores(data.responses);
-    console.log(`📊 Transformed dimension scores (${dimensionScores.length} dimensions):`, JSON.stringify(dimensionScores, null, 2));
+    console.log(`📊 Transformed ${dimensionScores.length} dimension scores for radar chart`);
 
-    // Calculate archetype label from scores if not provided
-    let archetypeLabel = data.archetype_label;
-    if (!archetypeLabel && data.archetype_scores) {
-      archetypeLabel = this.getArchetypeLabel(data.archetype_scores);
-    }
-    archetypeLabel = archetypeLabel || 'Unknown';
+    // archetype_label is not stored in Supabase; it is always derived from the scores
+    const archetypeLabel = getArchetypeLabel(data.archetype_scores);
 
     // Load template PDF
     const pdfBuffer = fs.readFileSync(this.templatePath);
@@ -115,21 +114,6 @@ export class EpitomeReportGeneratorService {
         Seductress: scores.Seductress as 1 | 2 | 3 | 4,
       };
     });
-  }
-
-  private getArchetypeLabel(archetypeScores: ArchetypeScores): string {
-    const entries = [
-      { name: 'Sovereign', score: archetypeScores.Sovereign },
-      { name: 'Empress', score: archetypeScores.Empress },
-      { name: 'Consort', score: archetypeScores.Consort },
-      { name: 'Seductress', score: archetypeScores.Seductress },
-    ];
-
-    const sorted = entries.sort((a, b) => a.score - b.score);
-    const lowestScore = sorted[0].score;
-    const leadingArchetypes = sorted.filter((e) => e.score <= lowestScore + 2);
-
-    return leadingArchetypes.map((e) => e.name).join(' and ');
   }
 
   private async replaceArchetypeLabel(
@@ -522,7 +506,9 @@ export class EpitomeReportGeneratorService {
 
       ARCHETYPES.forEach((archetype) => {
         const score = dim[archetype as keyof typeof dim] as number;
-        const radius = (maxRadius / 4) * score;
+        // Ranking 1 ("fully describes me") belongs on the outer ring, so invert before plotting.
+        const plottedScore = MAX_RANKING + 1 - score;
+        const radius = (maxRadius / MAX_RANKING) * plottedScore;
         const pointX = centerX + radius * Math.cos(angle);
         const pointY = centerY + radius * Math.sin(angle);
         points[archetype].push({ x: pointX, y: pointY });

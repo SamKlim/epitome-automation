@@ -5,16 +5,7 @@ import questionsMap from '../config/questions_map.json';
 import { SupabaseService } from '../db-supabase/supabase.service';
 import { EpitomeReportGeneratorService } from './epitome-report-generator.service';
 import { SurveyResponseDTO } from './response.dto';
-
-const ARCHETYPES = ['Sovereign', 'Empress', 'Consort', 'Seductress'] as const;
-type Archetype = (typeof ARCHETYPES)[number];
-
-export interface ArchetypeScores {
-  Sovereign: number;
-  Empress: number;
-  Consort: number;
-  Seductress: number;
-}
+import { ARCHETYPES, Archetype, ArchetypeScores, getArchetypeLabel } from './archetype-label';
 
 export interface TransformedSurveyResponse {
   response_id: string;
@@ -105,7 +96,7 @@ export class EpitomeAssessmentService {
 
     this.logger.log(`✅ Assessment ${transformed.response_id} processed`);
 
-    const archetypeLabel = this.getArchetypeLabel(transformed.archetype_scores);
+    const archetypeLabel = getArchetypeLabel(transformed.archetype_scores);
 
     return {
       success: true,
@@ -186,21 +177,6 @@ export class EpitomeAssessmentService {
     });
 
     return responses;
-  }
-
-  private getArchetypeLabel(archetypeScores: ArchetypeScores): string {
-    const entries = [
-      { name: 'Sovereign', score: archetypeScores.Sovereign },
-      { name: 'Empress', score: archetypeScores.Empress },
-      { name: 'Consort', score: archetypeScores.Consort },
-      { name: 'Seductress', score: archetypeScores.Seductress },
-    ];
-
-    const sorted = entries.sort((a, b) => b.score - a.score);
-    const highestScore = sorted[0].score;
-    const leadingArchetypes = sorted.filter((e) => e.score >= highestScore - 2);
-
-    return leadingArchetypes.map((e) => e.name).join(' and ');
   }
 
   private async sendEmailReportInBackground(

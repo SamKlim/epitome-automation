@@ -162,7 +162,7 @@ describe('EpitomeReportGeneratorService', () => {
       await expect(service.createCustomisedReport('123')).rejects.toThrow();
     });
 
-    it('should use archetype_label when provided', async () => {
+    it('should derive the label from scores even when archetype_label is present', async () => {
       const mockClient = {
         from: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({
@@ -491,8 +491,6 @@ describe('EpitomeReportGeneratorService', () => {
         response_id: '456',
         first_name: 'Jane',
         last_name: 'Smith',
-        archetype_label: 'Empress',
-        archetype_scores: {},
       };
 
       const mockClient = {
@@ -606,7 +604,7 @@ describe('EpitomeReportGeneratorService', () => {
       expect(result).toBeTruthy();
     });
 
-    it('should handle empty archetype_scores', async () => {
+    it('should throw on empty archetype_scores rather than default the label', async () => {
       const noScores = {
         ...mockResponseData,
         archetype_label: 'Consort',
@@ -628,11 +626,12 @@ describe('EpitomeReportGeneratorService', () => {
 
       supabaseService.getClient.mockReturnValue(mockClient as any);
 
-      const result = await service.createCustomisedReport('123');
-      expect(result).toBeTruthy();
+      await expect(service.createCustomisedReport('123')).rejects.toThrow(
+        /score is missing or invalid/,
+      );
     });
 
-    it('should handle null archetype_scores', async () => {
+    it('should throw on null archetype_scores rather than default the label', async () => {
       const nullScores = {
         ...mockResponseData,
         archetype_label: 'Seductress',
@@ -654,24 +653,14 @@ describe('EpitomeReportGeneratorService', () => {
 
       supabaseService.getClient.mockReturnValue(mockClient as any);
 
-      const result = await service.createCustomisedReport('123');
-      expect(result).toBeTruthy();
+      await expect(service.createCustomisedReport('123')).rejects.toThrow(
+        /archetype_scores is missing/,
+      );
     });
   });
 
   describe('generateRadarChartSvg', () => {
     describe('PNG Buffer Generation', () => {
-      it('should return a valid PNG buffer with default data', async () => {
-        const result = await (service as any).generateRadarChartSvg();
-
-        expect(result).toBeInstanceOf(Buffer);
-        expect(result.length).toBeGreaterThan(0);
-        expect(result[0]).toBe(0x89);
-        expect(result[1]).toBe(0x50);
-        expect(result[2]).toBe(0x4e);
-        expect(result[3]).toBe(0x47);
-      });
-
       it('should return a valid PNG buffer with custom data', async () => {
         const customData = [
           { dimension: 'Test', Sovereign: 4, Empress: 3, Consort: 2, Seductress: 1 },
@@ -743,20 +732,16 @@ describe('EpitomeReportGeneratorService', () => {
     });
 
     describe('Data Validation', () => {
-      it('should handle all 12 dimensions (default data)', async () => {
-        const result = await (service as any).generateRadarChartSvg();
-        expect(result).toBeInstanceOf(Buffer);
-        expect(result.length).toBeGreaterThan(0);
+      it('should throw when no data is passed instead of using defaults', async () => {
+        await expect((service as any).generateRadarChartSvg(undefined)).rejects.toThrow(
+          /no dimension scores provided/,
+        );
       });
 
-      it('should handle missing undefined parameter (uses defaults)', async () => {
-        const result = await (service as any).generateRadarChartSvg(undefined);
-        expect(result).toBeInstanceOf(Buffer);
-      });
-
-      it('should handle empty array gracefully', async () => {
-        const result = await (service as any).generateRadarChartSvg([]);
-        expect(result).toBeInstanceOf(Buffer);
+      it('should throw on an empty array instead of using defaults', async () => {
+        await expect((service as any).generateRadarChartSvg([])).rejects.toThrow(
+          /no dimension scores provided/,
+        );
       });
 
       it('should process dimensions with varying label lengths', async () => {
@@ -797,14 +782,6 @@ describe('EpitomeReportGeneratorService', () => {
     });
 
     describe('Performance', () => {
-      it('should generate chart within reasonable time', async () => {
-        const start = Date.now();
-        await (service as any).generateRadarChartSvg();
-        const duration = Date.now() - start;
-
-        expect(duration).toBeLessThan(5000);
-      });
-
       it('should handle large dimension count', async () => {
         const largeDimensions = Array.from({ length: 50 }, (_, i) => ({
           dimension: `Dimension ${i + 1}`,
