@@ -21,6 +21,8 @@ export class EpitomeAssessmentService {
     const startTime = Date.now();
     const timings: Record<string, number> = {};
 
+    this.logger.log(`📥 Received assessment response (ID: ${rawResponse.id})`);
+
     const transformed = this.transformService.transform(rawResponse);
 
     // Step 1: Store in Supabase
@@ -28,6 +30,7 @@ export class EpitomeAssessmentService {
     try {
       await this.supabaseService.insertSurveyResponse(transformed);
       timings.database = Date.now() - dbStart;
+      this.logger.log(`✅ Stored in Supabase: ${transformed.response_id} (${timings.database}ms)`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown database error';
       throw new Error(`Failed to store response: ${message}`);
@@ -45,7 +48,7 @@ export class EpitomeAssessmentService {
         transformed.response_id,
       );
       timings.pdf = Date.now() - pdfStart;
-      this.logger.log(`Generated PDF: ${pdfPath} (${timings.pdf}ms)`);
+      this.logger.log(`✅ PDF generated and saved temporarily (${timings.pdf}ms)`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : '';
@@ -60,6 +63,7 @@ export class EpitomeAssessmentService {
     // Step 3: Send email in background (fire and forget)
     // Don't await - return success to client immediately
     if (transformed.email) {
+      this.logger.log(`📧 Queuing email to ${transformed.email}...`);
       this.sendEmailInBackground(
         transformed.email,
         transformed.first_name || 'Unknown',
@@ -70,6 +74,8 @@ export class EpitomeAssessmentService {
     }
 
     const totalTime = Date.now() - startTime;
+
+    this.logger.log(`✅ Assessment ${transformed.response_id} processed (${totalTime}ms total)`);
 
     return {
       success: true,
