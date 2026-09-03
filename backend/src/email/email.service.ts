@@ -12,11 +12,17 @@ export class EmailService {
   }
 
   private initializeTransporter(): void {
+    const user = process.env.GMAIL_USER;
+    const pass = process.env.GMAIL_APP_PASSWORD;
+
+    console.log(`[EmailService] Initializing Gmail transport with user: ${user ? '✅ SET' : '❌ MISSING'}`);
+    console.log(`[EmailService] App password: ${pass ? '✅ SET (length: ' + pass.length + ')' : '❌ MISSING'}`);
+
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user,
+        pass,
       },
     });
   }
@@ -30,6 +36,12 @@ export class EmailService {
     const startTime = Date.now();
 
     try {
+      // DEBUG: Check credentials before use
+      console.log('🔍 DEBUG: Checking Gmail credentials...');
+      console.log('  GMAIL_USER:', process.env.GMAIL_USER ? '✅ SET' : '❌ MISSING');
+      console.log('  GMAIL_APP_PASSWORD:', process.env.GMAIL_APP_PASSWORD ? '✅ SET (length: ' + process.env.GMAIL_APP_PASSWORD.length + ')' : '❌ MISSING');
+      debugger;
+
       if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
         throw new Error('Gmail credentials not configured in environment variables');
       }

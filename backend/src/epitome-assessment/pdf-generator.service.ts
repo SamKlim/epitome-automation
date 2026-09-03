@@ -7,7 +7,10 @@ import { SupabaseService } from '../db/supabase.service';
 
 @Injectable()
 export class PdfGeneratorService {
-  private templatePath = path.join(__dirname, '../templates/epitome-template.pdf');
+  private templatePath = path.resolve(
+    __dirname,
+    '../../../src/templates/epitome-template.pdf'
+  );
   private reportsDir = '/tmp/reports';
 
   constructor(private supabaseService: SupabaseService) {
