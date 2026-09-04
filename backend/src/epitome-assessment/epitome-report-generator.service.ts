@@ -11,6 +11,41 @@ const MAX_RANKING = 4;
 
 const TEMPLATE_FILENAME = 'epitome-assessment-sample.pdf';
 
+/** Bottom-left quadrant of page 8 that the radar chart is drawn into. */
+const CHART_BOX_WIDTH = 590;
+const CHART_BOX_HEIGHT = 450;
+
+/** Dimension label size in radar-chart canvas units; scaled down when drawn into the PDF. */
+const RADAR_LABEL_FONT_SIZE = 26;
+
+/**
+ * Half of Helvetica's cap height (0.717em), used to convert a vertical *centre*
+ * into a pdf-lib text baseline. SVG's dominant-baseline="middle" centres the
+ * glyph box; pdf-lib positions from the baseline, so labels sit too high without this.
+ */
+const LABEL_BASELINE_OFFSET_RATIO = 0.36;
+
+/**
+ * A dimension label in radar-chart canvas coordinates (origin top-left, y down).
+ * Labels are deliberately NOT drawn into the SVG: Sharp rasterises SVG text via
+ * librsvg/fontconfig, which has no fonts on Vercel Lambda and silently renders
+ * every glyph as .notdef (an empty box). Drawing them with pdf-lib's built-in
+ * Helvetica instead keeps the image pipeline entirely font-free.
+ */
+interface RadarChartLabel {
+  text: string;
+  x: number;
+  y: number;
+  anchor: 'start' | 'middle' | 'end';
+}
+
+interface RadarChart {
+  png: Buffer;
+  canvasWidth: number;
+  canvasHeight: number;
+  labels: RadarChartLabel[];
+}
+
 /**
  * Where the template PDF can live, depending on how the code is being run:
  * - `src/` when running under ts-jest, or `dist/src/` after `nest build` copies assets
@@ -254,35 +289,32 @@ export class EpitomeReportGeneratorService {
       Seductress: 1 | 2 | 3 | 4;
     }>,
   ): Promise<void> {
-    // Draw white rectangle background (bottom-left quadrant: 590×450)
+    // Draw white rectangle background (bottom-left quadrant)
     page.drawRectangle({
       x: 0,
       y: 0,
-      width: 590,
-      height: 450,
+      width: CHART_BOX_WIDTH,
+      height: CHART_BOX_HEIGHT,
       color: rgb(1, 1, 1),
     });
 
-    // Generate radar chart PNG from dimension scores
-    const radarChartBuffer = await this.generateRadarChartSvg(dimensionScores);
-    const radarImage = await pdfDoc.embedPng(radarChartBuffer);
+    const chart = await this.generateRadarChartSvg(dimensionScores);
+    const radarImage = await pdfDoc.embedPng(chart.png);
 
-    // Calculate scaled dimensions to fit within box while maintaining aspect ratio
-    const boxWidth = 590;
-    const boxHeight = 450;
-    const estimatedAspectRatio = 1.4;
+    // Scale using the chart's true aspect ratio. Assuming a ratio would both distort
+    // the image and, because labels are positioned against it, misplace every label.
+    const aspectRatio = chart.canvasWidth / chart.canvasHeight;
+    let scaledWidth = CHART_BOX_WIDTH;
+    let scaledHeight = CHART_BOX_WIDTH / aspectRatio;
 
-    let scaledWidth = boxWidth;
-    let scaledHeight = boxWidth / estimatedAspectRatio;
-
-    if (scaledHeight > boxHeight) {
-      scaledHeight = boxHeight;
-      scaledWidth = boxHeight * estimatedAspectRatio;
+    if (scaledHeight > CHART_BOX_HEIGHT) {
+      scaledHeight = CHART_BOX_HEIGHT;
+      scaledWidth = CHART_BOX_HEIGHT * aspectRatio;
     }
 
     // Center chart both horizontally and vertically
-    const chartX = (boxWidth - scaledWidth) / 2;
-    const chartY = (boxHeight - scaledHeight) / 2;
+    const chartX = (CHART_BOX_WIDTH - scaledWidth) / 2;
+    const chartY = (CHART_BOX_HEIGHT - scaledHeight) / 2;
 
     page.drawImage(radarImage, {
       x: chartX,
@@ -291,7 +323,57 @@ export class EpitomeReportGeneratorService {
       height: scaledHeight,
     });
 
-    console.log(`📊 Radar chart embedded: ${scaledWidth.toFixed(0)}×${scaledHeight.toFixed(0)} (centered in 590×450 box)`);
+    await this.drawRadarChartLabels(page, pdfDoc, chart, {
+      chartX,
+      chartY,
+      scaledWidth,
+      scaledHeight,
+    });
+
+    console.log(
+      `📊 Radar chart embedded: ${scaledWidth.toFixed(0)}×${scaledHeight.toFixed(0)} with ${chart.labels.length} labels`,
+    );
+  }
+
+  /**
+   * Draws the dimension labels as real PDF text on top of the chart image.
+   *
+   * Chart canvas coordinates have their origin top-left with y increasing downward;
+   * PDF user space has its origin bottom-left with y increasing upward, so y is flipped.
+   */
+  private async drawRadarChartLabels(
+    page: PDFPage,
+    pdfDoc: PDFDocument,
+    chart: RadarChart,
+    placement: { chartX: number; chartY: number; scaledWidth: number; scaledHeight: number },
+  ): Promise<void> {
+    const { chartX, chartY, scaledWidth, scaledHeight } = placement;
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const scaleX = scaledWidth / chart.canvasWidth;
+    const scaleY = scaledHeight / chart.canvasHeight;
+    const fontSize = RADAR_LABEL_FONT_SIZE * scaleY;
+
+    chart.labels.forEach((label) => {
+      const anchorX = chartX + label.x * scaleX;
+      const centreY = chartY + scaledHeight - label.y * scaleY;
+
+      // pdf-lib always draws rightward from x, so emulate SVG's text-anchor here.
+      const textWidth = font.widthOfTextAtSize(label.text, fontSize);
+      let x = anchorX;
+      if (label.anchor === 'middle') {
+        x = anchorX - textWidth / 2;
+      } else if (label.anchor === 'end') {
+        x = anchorX - textWidth;
+      }
+
+      page.drawText(label.text, {
+        x,
+        y: centreY - fontSize * LABEL_BASELINE_OFFSET_RATIO,
+        size: fontSize,
+        font,
+        color: rgb(0, 0, 0),
+      });
+    });
   }
 
   private async replaceClientName(
@@ -371,17 +453,18 @@ export class EpitomeReportGeneratorService {
       Consort: 1 | 2 | 3 | 4;
       Seductress: 1 | 2 | 3 | 4;
     }>,
-  ): Promise<Buffer> {
+  ): Promise<RadarChart> {
     if (!scoresByArchetype || scoresByArchetype.length === 0) {
       throw new Error('Cannot generate radar chart: no dimension scores provided. Response data may be malformed.');
     }
 
     this.validateScoreData(scoresByArchetype);
     console.log(`📊 Radar chart generated with real data (${scoresByArchetype.length} dimensions)`);
-    const svgString = this.generateRadarChartSvgString(scoresByArchetype);
+    const { svg, canvasWidth, canvasHeight, labels } =
+      this.generateRadarChartSvgString(scoresByArchetype);
 
-    const pngBuffer = await sharp(Buffer.from(svgString)).png().toBuffer();
-    return pngBuffer;
+    const png = await sharp(Buffer.from(svg)).png().toBuffer();
+    return { png, canvasWidth, canvasHeight, labels };
   }
 
   private validateScoreData(
@@ -425,7 +508,7 @@ export class EpitomeReportGeneratorService {
       Consort: 1 | 2 | 3 | 4;
       Seductress: 1 | 2 | 3 | 4;
     }>,
-  ): string {
+  ): { svg: string; canvasWidth: number; canvasHeight: number; labels: RadarChartLabel[] } {
     const ARCHETYPES = ['Sovereign', 'Empress', 'Consort', 'Seductress'];
     const COLORS = {
       Sovereign: '#0B6889',
@@ -438,7 +521,7 @@ export class EpitomeReportGeneratorService {
     const maxRadius = 380;
     const labelDistance = maxRadius + 55;
     const angleSlice = (Math.PI * 2) / numDimensions;
-    const fontSize = 26;
+    const fontSize = RADAR_LABEL_FONT_SIZE;
 
     let tempCenterX = 1000;
     let tempCenterY = 1000;
@@ -495,6 +578,7 @@ export class EpitomeReportGeneratorService {
     const centerY = tempCenterY + offsetY;
 
     const svgElements: string[] = [];
+    const labels: RadarChartLabel[] = [];
     svgElements.push(`<rect width="${canvasWidth}" height="${canvasHeight}" fill="white" />`);
 
     for (let i = 1; i <= 4; i++) {
@@ -523,16 +607,15 @@ export class EpitomeReportGeneratorService {
       const labelX = centerX + labelDistance * Math.cos(angle);
       const labelY = centerY + labelDistance * Math.sin(angle);
 
-      let textAnchor = 'middle';
+      let textAnchor: RadarChartLabel['anchor'] = 'middle';
       if (Math.cos(angle) > 0.3) {
         textAnchor = 'start';
       } else if (Math.cos(angle) < -0.3) {
         textAnchor = 'end';
       }
 
-      svgElements.push(
-        `<text x="${labelX}" y="${labelY}" font-size="${fontSize}" font-family="Helvetica" text-anchor="${textAnchor}" dominant-baseline="middle" fill="black">${dim.dimension}</text>`,
-      );
+      // Recorded, not rendered — pdf-lib draws these on top of the image later.
+      labels.push({ text: dim.dimension, x: labelX, y: labelY, anchor: textAnchor });
 
       ARCHETYPES.forEach((archetype) => {
         const score = dim[archetype as keyof typeof dim] as number;
@@ -566,6 +649,6 @@ export class EpitomeReportGeneratorService {
     </svg>
   `;
 
-    return svgString;
+    return { svg: svgString, canvasWidth, canvasHeight, labels };
   }
 }

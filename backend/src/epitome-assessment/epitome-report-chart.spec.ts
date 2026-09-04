@@ -17,10 +17,27 @@ import {
  * property the previous mocked tests could never check.
  */
 
+interface ChartLabel {
+  text: string;
+  x: number;
+  y: number;
+  anchor: 'start' | 'middle' | 'end';
+}
+
 interface ReportGeneratorPrivates {
   transformResponsesToDimensionScores(responses: unknown[]): DimensionScores[];
-  generateRadarChartSvg(scores: DimensionScores[]): Promise<Buffer>;
-  generateRadarChartSvgString(scores: DimensionScores[]): string;
+  generateRadarChartSvg(scores: DimensionScores[]): Promise<{
+    png: Buffer;
+    canvasWidth: number;
+    canvasHeight: number;
+    labels: ChartLabel[];
+  }>;
+  generateRadarChartSvgString(scores: DimensionScores[]): {
+    svg: string;
+    canvasWidth: number;
+    canvasHeight: number;
+    labels: ChartLabel[];
+  };
 }
 
 interface AssessmentPrivates {
@@ -93,7 +110,7 @@ describe('Radar chart generation', () => {
     });
 
     it('places every chart point at the radius its ranking demands', () => {
-      const svg = generator.generateRadarChartSvgString(fixture.expectedDimensionScores);
+      const { svg } = generator.generateRadarChartSvgString(fixture.expectedDimensionScores);
       const radar = parseRadarSvg(svg);
 
       expect(radar.polygons).toHaveLength(ARCHETYPE_ORDER.length);
@@ -111,7 +128,7 @@ describe('Radar chart generation', () => {
     });
 
     it('renders a real PNG', async () => {
-      const png = await generator.generateRadarChartSvg(fixture.expectedDimensionScores);
+      const { png } = await generator.generateRadarChartSvg(fixture.expectedDimensionScores);
       expect(png.subarray(0, 4).toString('hex')).toBe('89504e47');
     });
   });
@@ -140,7 +157,7 @@ describe('Radar chart generation', () => {
       const single: DimensionScores[] = [
         { dimension: 'Only', Sovereign: 1, Empress: 4, Consort: 2, Seductress: 3 },
       ];
-      const radar = parseRadarSvg(generator.generateRadarChartSvgString(single));
+      const radar = parseRadarSvg(generator.generateRadarChartSvgString(single).svg);
 
       const sovereign = distanceFromCenter(radar, radar.polygons[0][0]);
       const empress = distanceFromCenter(radar, radar.polygons[1][0]);
@@ -149,10 +166,36 @@ describe('Radar chart generation', () => {
       expect(Math.abs(empress - radar.maxRadius / MAX_RANKING)).toBeLessThan(POSITION_TOLERANCE);
     });
 
-    it('labels every dimension', () => {
-      const svg = generator.generateRadarChartSvgString(FIXTURE_ONE.expectedDimensionScores);
+    it('returns a positioned label for every dimension', () => {
+      const { labels } = generator.generateRadarChartSvgString(
+        FIXTURE_ONE.expectedDimensionScores,
+      );
+
+      expect(labels.map((label) => label.text)).toEqual(
+        FIXTURE_ONE.expectedDimensionScores.map(({ dimension }) => dimension),
+      );
+      labels.forEach((label) => {
+        expect(Number.isFinite(label.x)).toBe(true);
+        expect(Number.isFinite(label.y)).toBe(true);
+        expect(['start', 'middle', 'end']).toContain(label.anchor);
+      });
+    });
+
+    /**
+     * Regression guard. Sharp rasterises SVG text through librsvg/fontconfig, which
+     * has no fonts on Vercel Lambda ("Cannot load default config file") and silently
+     * renders every glyph as an empty box. Labels must stay out of the SVG and be
+     * drawn by pdf-lib instead, so the image pipeline never needs a font.
+     */
+    it('puts no text in the SVG, so rendering never depends on a system font', () => {
+      const { svg } = generator.generateRadarChartSvgString(
+        FIXTURE_ONE.expectedDimensionScores,
+      );
+
+      expect(svg).not.toContain('<text');
+      expect(svg).not.toContain('font-family');
       FIXTURE_ONE.expectedDimensionScores.forEach(({ dimension }) => {
-        expect(svg).toContain(`>${dimension}</text>`);
+        expect(svg).not.toContain(dimension);
       });
     });
 
@@ -163,7 +206,7 @@ describe('Radar chart generation', () => {
       const b = generator.generateRadarChartSvgString([
         { dimension: 'X', Sovereign: 4, Empress: 3, Consort: 2, Seductress: 1 },
       ]);
-      expect(a).not.toEqual(b);
+      expect(a.svg).not.toEqual(b.svg);
     });
   });
 

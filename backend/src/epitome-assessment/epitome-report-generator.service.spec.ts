@@ -669,9 +669,9 @@ describe('EpitomeReportGeneratorService', () => {
 
         const result = await (service as any).generateRadarChartSvg(customData);
 
-        expect(result).toBeInstanceOf(Buffer);
-        expect(result.length).toBeGreaterThan(0);
-        expect(result.slice(0, 4).toString('hex')).toBe('89504e47');
+        expect(result.png).toBeInstanceOf(Buffer);
+        expect(result.png.length).toBeGreaterThan(0);
+        expect(result.png.slice(0, 4).toString('hex')).toBe('89504e47');
       });
 
       it('should handle single dimension data', async () => {
@@ -681,8 +681,8 @@ describe('EpitomeReportGeneratorService', () => {
 
         const result = await (service as any).generateRadarChartSvg(singleDim);
 
-        expect(result).toBeInstanceOf(Buffer);
-        expect(result.length).toBeGreaterThan(0);
+        expect(result.png).toBeInstanceOf(Buffer);
+        expect(result.png.length).toBeGreaterThan(0);
       });
 
       it('should generate different buffers for different data', async () => {
@@ -707,7 +707,7 @@ describe('EpitomeReportGeneratorService', () => {
         ];
 
         const result = await (service as any).generateRadarChartSvg(minScores);
-        expect(result).toBeInstanceOf(Buffer);
+        expect(result.png).toBeInstanceOf(Buffer);
       });
 
       it('should handle maximum scores (4)', async () => {
@@ -716,7 +716,7 @@ describe('EpitomeReportGeneratorService', () => {
         ];
 
         const result = await (service as any).generateRadarChartSvg(maxScores);
-        expect(result).toBeInstanceOf(Buffer);
+        expect(result.png).toBeInstanceOf(Buffer);
       });
 
       it('should handle mixed scores across range', async () => {
@@ -727,7 +727,7 @@ describe('EpitomeReportGeneratorService', () => {
         ];
 
         const result = await (service as any).generateRadarChartSvg(mixedScores);
-        expect(result).toBeInstanceOf(Buffer);
+        expect(result.png).toBeInstanceOf(Buffer);
       });
     });
 
@@ -751,7 +751,7 @@ describe('EpitomeReportGeneratorService', () => {
         ];
 
         const result = await (service as any).generateRadarChartSvg(variedLabels);
-        expect(result).toBeInstanceOf(Buffer);
+        expect(result.png).toBeInstanceOf(Buffer);
       });
     });
 
@@ -792,7 +792,7 @@ describe('EpitomeReportGeneratorService', () => {
         }));
 
         const result = await (service as any).generateRadarChartSvg(largeDimensions);
-        expect(result).toBeInstanceOf(Buffer);
+        expect(result.png).toBeInstanceOf(Buffer);
       });
     });
   });
