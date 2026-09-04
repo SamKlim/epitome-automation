@@ -66,13 +66,6 @@ export class EpitomeReportGeneratorService {
       throw new Error(`Failed to fetch response ${responseId} from Supabase: ${error?.message}`);
     }
 
-    console.log(`✅ Fetched data from Supabase for ${responseId}:`, {
-      firstName: data.first_name,
-      lastName: data.last_name,
-      archetypeLabel: data.archetype_label,
-      responseId: data.response_id,
-    });
-
     const firstName = data.first_name || 'Unknown';
     const lastName = data.last_name || 'Unknown';
 
@@ -82,6 +75,13 @@ export class EpitomeReportGeneratorService {
 
     // archetype_label is not stored in Supabase; it is always derived from the scores
     const archetypeLabel = getArchetypeLabel(data.archetype_scores);
+
+    console.log(`✅ Fetched data from Supabase for ${responseId}:`, {
+      firstName: data.first_name,
+      lastName: data.last_name,
+      archetypeLabel,
+      responseId: data.response_id,
+    });
 
     // Load template PDF
     const pdfBuffer = fs.readFileSync(this.getTemplatePath());

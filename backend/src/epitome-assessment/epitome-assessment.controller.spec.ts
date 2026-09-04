@@ -206,8 +206,8 @@ describe('EpitomeAssessmentController', () => {
     });
 
     it('should throw 400 error when id is missing', async () => {
-      const missing = { ...validResponse };
-      delete missing.id;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, ...missing } = validResponse;
 
       try {
         await controller.submitResponse(missing, `Bearer ${VALID_TOKEN}`);
@@ -220,8 +220,8 @@ describe('EpitomeAssessmentController', () => {
     });
 
     it('should throw 400 error when surveyId is missing', async () => {
-      const missing = { ...validResponse };
-      delete missing.surveyId;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { surveyId, ...missing } = validResponse;
 
       try {
         await controller.submitResponse(missing, `Bearer ${VALID_TOKEN}`);
