@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import {
   EpitomeReportGeneratorService,
   resolveTemplatePath,
@@ -8,6 +9,7 @@ import { SupabaseService } from '../db-supabase/supabase.service';
 import {
   DimensionScores,
   FIXTURE_ONE,
+  FIXTURE_TWO,
   SURVEY_FIXTURES,
 } from '../../tests/fixtures/e2e-survey-response';
 
@@ -235,6 +237,63 @@ describe('Radar chart generation', () => {
     it('refuses to render an out-of-range ranking', async () => {
       const bad = [{ dimension: 'X', Sovereign: 5, Empress: 3, Consort: 2, Seductress: 1 }] as never;
       await expect(generator.generateRadarChartSvg(bad)).rejects.toThrow(/must be 1-4/);
+    });
+
+    it('generates and saves a complete PDF report with fixture data', async () => {
+      const responseData = {
+        response_id: 'test-fixture-002',
+        first_name: 'Jane',
+        last_name: 'Smith',
+        archetype_label: FIXTURE_TWO.expectedLabel,
+        archetype_scores: FIXTURE_TWO.expectedTotals,
+        responses: [
+          ...FIXTURE_TWO.expectedDimensionScores.map((dim) => ({
+            question_id: Math.random(),
+            dimension: dim.dimension,
+            answers: [
+              { subquestion_id: 's1', archetype: 'Sovereign', statement: 'stmt', ranking: dim.Sovereign },
+              { subquestion_id: 's2', archetype: 'Empress', statement: 'stmt', ranking: dim.Empress },
+              { subquestion_id: 's3', archetype: 'Consort', statement: 'stmt', ranking: dim.Consort },
+              { subquestion_id: 's4', archetype: 'Seductress', statement: 'stmt', ranking: dim.Seductress },
+            ],
+          })),
+        ],
+      };
+
+      const mockClient = {
+        from: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: responseData,
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      };
+
+      const mockSupabase = {
+        getClient: jest.fn().mockReturnValue(mockClient),
+      } as any;
+
+      const reportService = new EpitomeReportGeneratorService(mockSupabase);
+      const pdfPath = await reportService.createCustomisedReport('test-fixture-002');
+
+      expect(pdfPath).toContain('epitome-report-test-fixture-002-customised.pdf');
+      expect(fs.existsSync(pdfPath)).toBe(true);
+
+      const stats = fs.statSync(pdfPath);
+      expect(stats.size).toBeGreaterThan(0);
+
+      const outputDir = path.resolve(__dirname, '../../../test-output');
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      const outputPath = path.join(outputDir, 'epitome-test-report-fixture.pdf');
+      fs.copyFileSync(pdfPath, outputPath);
+      expect(fs.existsSync(outputPath)).toBe(true);
+      console.log(`✅ Test PDF saved to: ${outputPath}`);
     });
   });
 });

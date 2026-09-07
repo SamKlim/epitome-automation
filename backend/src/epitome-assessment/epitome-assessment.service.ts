@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as fs from 'fs';
+import * as Sentry from '@sentry/node';
 import questionsMap from '../config/questions_map.json';
 import { SupabaseService } from '../db-supabase/supabase.service';
 import { EpitomeReportGeneratorService } from './epitome-report-generator.service';
@@ -68,25 +69,54 @@ export class EpitomeAssessmentService {
 
   async processResponse(rawResponse: any) {
     this.logger.log(`Received assessment response (ID: ${rawResponse.id})`);
+    Sentry.addBreadcrumb({
+      message: 'Assessment response received',
+      level: 'info',
+      data: { response_id: rawResponse.id },
+    });
 
     const transformed = this.transformResponse(rawResponse);
+    Sentry.addBreadcrumb({
+      message: 'Response transformed',
+      level: 'info',
+      data: { response_id: transformed.response_id },
+    });
 
     // Step 1: Store in Supabase
     try {
       await this.supabaseService.insertSurveyResponse(transformed);
       this.logger.log(`✅ Stored in Supabase: ${transformed.response_id}`);
+      Sentry.addBreadcrumb({
+        message: 'Response stored in Supabase',
+        level: 'info',
+        data: { response_id: transformed.response_id },
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown database error';
+      Sentry.captureException(error, {
+        tags: { phase: 'database_insert' },
+        contexts: { response: { response_id: transformed.response_id } },
+      });
       throw new Error(`Failed to store response: ${message}`);
     }
 
     // Step 2: Generate Report (fetches name and archetype from Supabase)
     let reportPath: string;
     try {
+      Sentry.addBreadcrumb({
+        message: 'Starting report generation',
+        level: 'info',
+        data: { response_id: transformed.response_id },
+      });
       reportPath = await this.reportGeneratorService.createCustomisedReport(
         transformed.response_id,
       );
       this.logger.log(`✅ Report generated and saved temporarily`);
+      Sentry.addBreadcrumb({
+        message: 'Report generated successfully',
+        level: 'info',
+        data: { response_id: transformed.response_id, report_path: reportPath },
+      });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : '';
@@ -94,6 +124,10 @@ export class EpitomeAssessmentService {
         message: errorMsg,
         stack: errorStack,
         type: error instanceof Error ? error.constructor.name : typeof error,
+      });
+      Sentry.captureException(error, {
+        tags: { phase: 'report_generation' },
+        contexts: { response: { response_id: transformed.response_id } },
       });
       throw error;
     }
@@ -111,9 +145,19 @@ export class EpitomeAssessmentService {
       );
     } else {
       this.logger.warn(`[${transformed.response_id}] No email address in response; report not sent`);
+      Sentry.addBreadcrumb({
+        message: 'No email address provided',
+        level: 'warning',
+        data: { response_id: transformed.response_id },
+      });
     }
 
     this.logger.log(`✅ Assessment ${transformed.response_id} processed (email_sent=${emailSent})`);
+    Sentry.addBreadcrumb({
+      message: 'Assessment processing completed',
+      level: 'info',
+      data: { response_id: transformed.response_id, email_sent: emailSent },
+    });
 
     return {
       success: true,
@@ -207,15 +251,41 @@ export class EpitomeAssessmentService {
   ): Promise<boolean> {
     for (let attempt = 1; attempt <= EMAIL_MAX_ATTEMPTS; attempt++) {
       this.logger.log(`[${responseId}] Sending report to ${email} (attempt ${attempt}/${EMAIL_MAX_ATTEMPTS})`);
+      Sentry.addBreadcrumb({
+        message: `Email send attempt ${attempt}`,
+        level: 'info',
+        data: { response_id: responseId, recipient: email, attempt },
+      });
       try {
         await this.sendEmailReport(email, firstName, lastName, reportPath);
+        Sentry.addBreadcrumb({
+          message: 'Email sent successfully',
+          level: 'info',
+          data: { response_id: responseId, recipient: email },
+        });
         return true;
       } catch (error) {
         const failure = classifySmtpError(error);
         this.logger.error(`[${responseId}] ${describeSmtpFailure(failure, process.env.GMAIL_USER)}`);
+        Sentry.addBreadcrumb({
+          message: `Email send failed: ${failure.kind}`,
+          level: 'warning',
+          data: {
+            response_id: responseId,
+            recipient: email,
+            attempt,
+            error_kind: failure.kind,
+            error_details: describeSmtpFailure(failure, process.env.GMAIL_USER),
+          },
+        });
 
         if (failure.kind === 'auth') {
           this.logger.error(`[${responseId}] Not retrying: credentials will not change between attempts`);
+          Sentry.captureMessage('Email auth failure - aborting retries', {
+            level: 'error',
+            tags: { phase: 'email_auth_failure' },
+            contexts: { response: { response_id: responseId } },
+          });
           return false;
         }
         if (attempt < EMAIL_MAX_ATTEMPTS) {
@@ -226,6 +296,11 @@ export class EpitomeAssessmentService {
     }
 
     this.logger.error(`[${responseId}] Giving up after ${EMAIL_MAX_ATTEMPTS} attempts; report not emailed to ${email}`);
+    Sentry.captureMessage('Email delivery failed after all retries', {
+      level: 'error',
+      tags: { phase: 'email_final_failure' },
+      contexts: { response: { response_id: responseId, recipient: email } },
+    });
     return false;
   }
 
