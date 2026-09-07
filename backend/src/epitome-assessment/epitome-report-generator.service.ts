@@ -638,7 +638,7 @@ export class EpitomeReportGeneratorService {
 
       archetypePoints.forEach((point) => {
         svgElements.push(
-          `<circle cx="${point.x}" cy="${point.y}" r="11" fill="${COLORS[archetype as keyof typeof COLORS]}" />`,
+          `<circle cx="${point.x}" cy="${point.y}" r="6.5" fill="${COLORS[archetype as keyof typeof COLORS]}" />`,
         );
       });
     });
