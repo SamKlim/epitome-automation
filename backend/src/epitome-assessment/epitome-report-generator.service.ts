@@ -258,7 +258,7 @@ export class EpitomeReportGeneratorService {
       const secondArchetype = archetypes[1].trim().toUpperCase();
 
       const line1Text = `You tend to lead with the ${firstArchetype}`;
-      const line2Text = `AND the ${secondArchetype}.`;
+      const line2Text = `and the ${secondArchetype}.`;
 
       page.drawText(line1Text, {
         x: textX,
