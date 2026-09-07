@@ -215,12 +215,12 @@ export class EpitomeReportGeneratorService {
     if (isSingleArchetype) {
       // Single archetype: cover just one line
       coverBoxTop = line1Y;
-      coverBoxBottom = line1Y + textLineHeight;
-      coverBoxHeight = textLineHeight;
+      coverBoxBottom = line1Y + textLineHeight + 4;
+      coverBoxHeight = textLineHeight + 4;
     } else {
       // Double archetype: cover both lines
       coverBoxTop = line2Y;
-      coverBoxBottom = line1Y + textLineHeight;
+      coverBoxBottom = line1Y + textLineHeight + 4;
       coverBoxHeight = coverBoxBottom - coverBoxTop;
     }
 
