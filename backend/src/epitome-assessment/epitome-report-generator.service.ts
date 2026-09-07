@@ -202,8 +202,8 @@ export class EpitomeReportGeneratorService {
     // Step 3: Define text positioning (coordinates from template analysis)
     // "You tend to lead with the EMPRESS." is located at:
     const textX = 42.5; // Left aligned
-    const line1Y = 616.3; // Original text Y position (shifted down 8px from 608.3)
-    const line2Y = 600.3; // Second line (shifted down 8px from 592.3, with 16px line height)
+    const line1Y = 615.3; // Original text Y position (shifted down 9px from 606.3)
+    const line2Y = 599.3; // Second line (shifted down 9px from 590.3, with 16px line height)
     const textLineHeight = 16;
 
     // Step 4: Draw COVERING BOX to hide original text
