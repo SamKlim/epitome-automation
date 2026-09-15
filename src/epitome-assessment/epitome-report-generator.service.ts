@@ -25,6 +25,39 @@ const RADAR_LABEL_FONT_SIZE = 26;
  */
 const LABEL_BASELINE_OFFSET_RATIO = 0.36;
 
+// Typography
+const ARCHETYPE_LABEL_FONT_SIZE = 12;
+const CLIENT_NAME_FONT_SIZE = 15.74;
+const TEXT_LINE_HEIGHT = 16;
+
+// Archetype label positioning (Page 8)
+const ARCHETYPE_LABEL_X = 42.5;
+const ARCHETYPE_LABEL_LINE1_Y = 615.3;
+const ARCHETYPE_LABEL_LINE2_Y = 599.3;
+const ARCHETYPE_COVER_BOX_RIGHT = 260;
+const ARCHETYPE_COVER_BOX_PADDING = 2;
+
+// Client name box positioning (Page 1)
+const CLIENT_NAME_BOX_LEFT = 214.2;
+const CLIENT_NAME_BOX_RIGHT = 396.1;
+const CLIENT_NAME_BOX_TOP = 66;
+const CLIENT_NAME_BOX_BOTTOM = 88;
+const CLIENT_NAME_CENTER_X = 305.1;
+const CLIENT_NAME_CENTER_Y = 77.5;
+const CLIENT_NAME_TEXT_Y = 72;
+const CLIENT_NAME_BOX_PADDING = 2;
+
+// Colors
+const COLOR_BLACK = rgb(0, 0, 0);
+const COLOR_WHITE = rgb(1, 1, 1);
+const CLIENT_NAME_BOX_COLOR = rgb(248 / 255, 245 / 255, 236 / 255);
+
+// Radar chart
+const RADAR_MAX_RADIUS = 380;
+const RADAR_PADDING = 20;
+const RADAR_ANGLE_THRESHOLD = 0.3;
+const RADAR_CIRCLE_RADIUS = 6.5;
+
 /**
  * A dimension label in radar-chart canvas coordinates (origin top-left, y down).
  * Labels are deliberately NOT drawn into the SVG: Sharp rasterises SVG text via
@@ -196,15 +229,9 @@ export class EpitomeReportGeneratorService {
 
     // Step 2: Embed font (Helvetica for overlay text)
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontSize = 12;
-    const textColor = rgb(0, 0, 0);
 
     // Step 3: Define text positioning (coordinates from template analysis)
     // "You tend to lead with the EMPRESS." is located at:
-    const textX = 42.5; // Left aligned
-    const line1Y = 615.3; // Original text Y position (shifted down 9px from 606.3)
-    const line2Y = 599.3; // Second line (shifted down 9px from 590.3, with 16px line height)
-    const textLineHeight = 16;
 
     // Step 4: Draw COVERING BOX to hide original text
     // Box must cover all possible text variations
@@ -214,27 +241,25 @@ export class EpitomeReportGeneratorService {
 
     if (isSingleArchetype) {
       // Single archetype: cover just one line
-      coverBoxTop = line1Y;
-      coverBoxBottom = line1Y + textLineHeight + 4;
-      coverBoxHeight = textLineHeight + 4;
+      coverBoxTop = ARCHETYPE_LABEL_LINE1_Y;
+      coverBoxBottom = ARCHETYPE_LABEL_LINE1_Y + TEXT_LINE_HEIGHT + 4;
+      coverBoxHeight = TEXT_LINE_HEIGHT + 4;
     } else {
       // Double archetype: cover both lines
-      coverBoxTop = line2Y;
-      coverBoxBottom = line1Y + textLineHeight + 4;
+      coverBoxTop = ARCHETYPE_LABEL_LINE2_Y;
+      coverBoxBottom = ARCHETYPE_LABEL_LINE1_Y + TEXT_LINE_HEIGHT + 4;
       coverBoxHeight = coverBoxBottom - coverBoxTop;
     }
 
-    // Make covering box from x=0 to x=260 only
-    const coverBoxLeft = textX - 2;
-    const coverBoxRight = 260; // Only cover up to 260px from left edge
+    // Make covering box from x=0 to ARCHETYPE_COVER_BOX_RIGHT only
+    const coverBoxLeft = ARCHETYPE_LABEL_X - ARCHETYPE_COVER_BOX_PADDING;
 
-    const whiteColor = rgb(1, 1, 1); // White background to match page
     page.drawRectangle({
       x: coverBoxLeft,
       y: coverBoxTop,
-      width: coverBoxRight - coverBoxLeft,
+      width: ARCHETYPE_COVER_BOX_RIGHT - coverBoxLeft,
       height: coverBoxHeight,
-      color: whiteColor,
+      color: COLOR_WHITE,
     });
 
     // Step 5: Draw replacement text (left-aligned)
@@ -243,11 +268,11 @@ export class EpitomeReportGeneratorService {
       // Format: "You tend to lead with the EMPRESS."
       const text = `You tend to lead with the ${archetypeLabel.toUpperCase()}.`;
       page.drawText(text, {
-        x: textX,
-        y: line1Y,
-        size: fontSize,
+        x: ARCHETYPE_LABEL_X,
+        y: ARCHETYPE_LABEL_LINE1_Y,
+        size: ARCHETYPE_LABEL_FONT_SIZE,
         font,
-        color: textColor,
+        color: COLOR_BLACK,
       });
     } else {
       // DOUBLE ARCHETYPE: Two lines
@@ -261,19 +286,19 @@ export class EpitomeReportGeneratorService {
       const line2Text = `and the ${secondArchetype}.`;
 
       page.drawText(line1Text, {
-        x: textX,
-        y: line1Y,
-        size: fontSize,
+        x: ARCHETYPE_LABEL_X,
+        y: ARCHETYPE_LABEL_LINE1_Y,
+        size: ARCHETYPE_LABEL_FONT_SIZE,
         font,
-        color: textColor,
+        color: COLOR_BLACK,
       });
 
       page.drawText(line2Text, {
-        x: textX,
-        y: line2Y,
-        size: fontSize,
+        x: ARCHETYPE_LABEL_X,
+        y: ARCHETYPE_LABEL_LINE2_Y,
+        size: ARCHETYPE_LABEL_FONT_SIZE,
         font,
-        color: textColor,
+        color: COLOR_BLACK,
       });
     }
   }
@@ -295,7 +320,7 @@ export class EpitomeReportGeneratorService {
       y: 0,
       width: CHART_BOX_WIDTH,
       height: CHART_BOX_HEIGHT,
-      color: rgb(1, 1, 1),
+      color: COLOR_WHITE,
     });
 
     const chart = await this.generateRadarChartSvg(dimensionScores);
@@ -371,7 +396,7 @@ export class EpitomeReportGeneratorService {
         y: centreY - fontSize * LABEL_BASELINE_OFFSET_RATIO,
         size: fontSize,
         font,
-        color: rgb(0, 0, 0),
+        color: COLOR_BLACK,
       });
     });
   }
@@ -387,61 +412,48 @@ export class EpitomeReportGeneratorService {
 
     // Step 1: Embed Helvetica font for the name
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontSize = 15.74; // Matches original template font size
     const nameText = `${firstName.toUpperCase()} ${lastName.toUpperCase()}`;
 
-    // Step 2: Define cream box color (#F8F5EC) - matches page background
-    const boxColor = rgb(248 / 255, 245 / 255, 236 / 255);
-
-    // Step 3: Draw ORIGINAL BOX (fixed position, always covers SALLY-ANN SAMPLE)
+    // Step 2: Draw ORIGINAL BOX (fixed position, always covers SALLY-ANN SAMPLE)
     // This box remains constant regardless of the name entered
-    const originalBoxLeft = 214.2; // 231.2 - 1 - 2 (with 2px padding)
-    const originalBoxRight = 396.1; // 379.0 + 1 + 2 (with 2px padding)
-    const originalBoxTop = 66;
-    const originalBoxBottom = 88;
     page.drawRectangle({
-      x: originalBoxLeft,
-      y: originalBoxTop,
-      width: originalBoxRight - originalBoxLeft,
-      height: originalBoxBottom - originalBoxTop,
-      color: boxColor,
+      x: CLIENT_NAME_BOX_LEFT,
+      y: CLIENT_NAME_BOX_TOP,
+      width: CLIENT_NAME_BOX_RIGHT - CLIENT_NAME_BOX_LEFT,
+      height: CLIENT_NAME_BOX_BOTTOM - CLIENT_NAME_BOX_TOP,
+      color: CLIENT_NAME_BOX_COLOR,
     });
 
-    // Step 4: Calculate NAME BOX dimensions (generic for any name)
-    // Center point is fixed at (305.1, 77.5) per design spec
-    const centerX = 305.1;
-    const centerY = 77.5;
-    const textY = 72; // Baseline Y position (Helvetica-specific)
-
+    // Step 3: Calculate NAME BOX dimensions (generic for any name)
+    // Center point is fixed at (CLIENT_NAME_CENTER_X, CLIENT_NAME_CENTER_Y) per design spec
     // Calculate actual text width using font metrics (more accurate than char count)
-    const textWidth = font.widthOfTextAtSize(nameText, fontSize);
+    const textWidth = font.widthOfTextAtSize(nameText, CLIENT_NAME_FONT_SIZE);
 
-    // Position text so it's horizontally centered at centerX
-    const textStartX = centerX - textWidth / 2;
+    // Position text so it's horizontally centered at CLIENT_NAME_CENTER_X
+    const textStartX = CLIENT_NAME_CENTER_X - textWidth / 2;
 
-    // Step 5: Create NAME BOX with 2px padding on all sides
+    // Step 4: Create NAME BOX with padding on all sides
     // Box expands/shrinks based on name length while staying centered
-    const padding = 2;
-    const nameBoxLeft = textStartX - 1 - padding; // -3 from text start
-    const nameBoxRight = textStartX + textWidth + 1 + padding; // +3
-    const nameBoxTop = 66; // Same as original (top of page box area)
-    const nameBoxBottom = 88; // Same as original (bottom of page box area)
+    const nameBoxLeft = textStartX - 1 - CLIENT_NAME_BOX_PADDING; // -3 from text start
+    const nameBoxRight = textStartX + textWidth + 1 + CLIENT_NAME_BOX_PADDING; // +3
+    const nameBoxTop = CLIENT_NAME_BOX_TOP; // Top of page box area
+    const nameBoxBottom = CLIENT_NAME_BOX_BOTTOM; // Bottom of page box area
 
     page.drawRectangle({
       x: nameBoxLeft,
       y: nameBoxTop,
       width: nameBoxRight - nameBoxLeft,
       height: nameBoxBottom - nameBoxTop,
-      color: boxColor,
+      color: CLIENT_NAME_BOX_COLOR,
     });
 
-    // Step 6: Draw the centered name text on top of the box
+    // Step 5: Draw the centered name text on top of the box
     page.drawText(nameText, {
       x: textStartX,
-      y: textY,
-      size: fontSize,
+      y: CLIENT_NAME_TEXT_Y,
+      size: CLIENT_NAME_FONT_SIZE,
       font,
-      color: rgb(0, 0, 0), // Black text
+      color: COLOR_BLACK,
     });
   }
 
@@ -518,8 +530,7 @@ export class EpitomeReportGeneratorService {
     };
 
     const numDimensions = data.length;
-    const maxRadius = 380;
-    const labelDistance = maxRadius + 55;
+    const labelDistance = RADAR_MAX_RADIUS + 55;
     const angleSlice = (Math.PI * 2) / numDimensions;
     const fontSize = RADAR_LABEL_FONT_SIZE;
 
@@ -532,7 +543,7 @@ export class EpitomeReportGeneratorService {
       maxY = -Infinity;
 
     for (let i = 1; i <= 4; i++) {
-      const radius = (maxRadius / 4) * i;
+      const radius = (RADAR_MAX_RADIUS / 4) * i;
       minX = Math.min(minX, tempCenterX - radius);
       maxX = Math.max(maxX, tempCenterX + radius);
       minY = Math.min(minY, tempCenterY - radius);
@@ -550,10 +561,10 @@ export class EpitomeReportGeneratorService {
       let textMinX = labelX - textWidth / 2;
       let textMaxX = labelX + textWidth / 2;
 
-      if (Math.cos(angle) > 0.3) {
+      if (Math.cos(angle) > RADAR_ANGLE_THRESHOLD) {
         textMinX = labelX;
         textMaxX = labelX + textWidth;
-      } else if (Math.cos(angle) < -0.3) {
+      } else if (Math.cos(angle) < -RADAR_ANGLE_THRESHOLD) {
         textMinX = labelX - textWidth;
         textMaxX = labelX;
       }
@@ -564,11 +575,10 @@ export class EpitomeReportGeneratorService {
       maxY = Math.max(maxY, labelY + textHeight / 2);
     });
 
-    const padding = 20;
-    minX -= padding;
-    maxX += padding;
-    minY -= padding;
-    maxY += padding;
+    minX -= RADAR_PADDING;
+    maxX += RADAR_PADDING;
+    minY -= RADAR_PADDING;
+    maxY += RADAR_PADDING;
 
     const canvasWidth = Math.ceil(maxX - minX);
     const canvasHeight = Math.ceil(maxY - minY);
@@ -582,7 +592,7 @@ export class EpitomeReportGeneratorService {
     svgElements.push(`<rect width="${canvasWidth}" height="${canvasHeight}" fill="white" />`);
 
     for (let i = 1; i <= 4; i++) {
-      const radius = (maxRadius / 4) * i;
+      const radius = (RADAR_MAX_RADIUS / 4) * i;
       svgElements.push(
         `<circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="#999999" stroke-width="1" />`,
       );
@@ -597,8 +607,8 @@ export class EpitomeReportGeneratorService {
 
     data.forEach((dim, i) => {
       const angle = angleSlice * i - Math.PI / 2;
-      const x = centerX + maxRadius * Math.cos(angle);
-      const y = centerY + maxRadius * Math.sin(angle);
+      const x = centerX + RADAR_MAX_RADIUS * Math.cos(angle);
+      const y = centerY + RADAR_MAX_RADIUS * Math.sin(angle);
 
       svgElements.push(
         `<line x1="${centerX}" y1="${centerY}" x2="${x}" y2="${y}" stroke="#cccccc" stroke-width="3" />`,
@@ -608,9 +618,9 @@ export class EpitomeReportGeneratorService {
       const labelY = centerY + labelDistance * Math.sin(angle);
 
       let textAnchor: RadarChartLabel['anchor'] = 'middle';
-      if (Math.cos(angle) > 0.3) {
+      if (Math.cos(angle) > RADAR_ANGLE_THRESHOLD) {
         textAnchor = 'start';
-      } else if (Math.cos(angle) < -0.3) {
+      } else if (Math.cos(angle) < -RADAR_ANGLE_THRESHOLD) {
         textAnchor = 'end';
       }
 
@@ -621,7 +631,7 @@ export class EpitomeReportGeneratorService {
         const score = dim[archetype as keyof typeof dim] as number;
         // Ranking 1 ("fully describes me") belongs on the outer ring, so invert before plotting.
         const plottedScore = MAX_RANKING + 1 - score;
-        const radius = (maxRadius / MAX_RANKING) * plottedScore;
+        const radius = (RADAR_MAX_RADIUS / MAX_RANKING) * plottedScore;
         const pointX = centerX + radius * Math.cos(angle);
         const pointY = centerY + radius * Math.sin(angle);
         points[archetype].push({ x: pointX, y: pointY });
@@ -638,7 +648,7 @@ export class EpitomeReportGeneratorService {
 
       archetypePoints.forEach((point) => {
         svgElements.push(
-          `<circle cx="${point.x}" cy="${point.y}" r="6.5" fill="${COLORS[archetype as keyof typeof COLORS]}" />`,
+          `<circle cx="${point.x}" cy="${point.y}" r="${RADAR_CIRCLE_RADIUS}" fill="${COLORS[archetype as keyof typeof COLORS]}" />`,
         );
       });
     });
