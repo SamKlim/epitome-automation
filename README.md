@@ -1,6 +1,91 @@
-# Epitome Assessment Backend
+# Epitome Assessment Automation
 
-Survey response processing, archetype calculation, and PDF report generation for the Epitome Assessment.
+Automates the Epitome Archetype assessment: takes a completed SurveyMonkey response, calculates the respondent's leading archetype, generates a personalized PDF report with a radar chart, and emails it — no manual scoring or report-building.
+
+## How It Works
+
+```mermaid
+flowchart TD
+    A["Client rates statements 1-4<br/>in SurveyMonkey survey"] -->|Response Completed| B["Make.com<br/>webhook automation"]
+    B -->|forwards response| C["POST /api/assessments/responses<br/>NestJS backend"]
+    C --> D["Transform<br/>sum rankings → archetype scores<br/>(epitome-assessment.service.ts)"]
+    D --> E[("Supabase<br/>store response + scores")]
+    D --> F["Generate PDF report<br/>archetype label + radar chart<br/>(epitome-report-generator.service.ts)"]
+    F --> G["Email PDF to user<br/>via Gmail"]
+    C -.errors.-> H["Sentry<br/>error tracking"]
+```
+
+## Make.com Automation Workflow
+
+The assessment automation is triggered and orchestrated by Make.com, which bridges SurveyMonkey responses to your backend processing and email delivery.
+
+### Workflow Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Make.com (Orchestration)                   │
+│                                                                 │
+│  1. Survey Monkey Webhook                                      │
+│     └─ Triggers instantly when response is submitted           │
+│                                                                 │
+│  2. Get Response                                                │
+│     └─ Extracts full response data from SurveyMonkey          │
+│        (name, email, organization, all rankings)              │
+│                                                                 │
+│  3. HTTP POST to Backend                                        │
+│     └─ POST https://epitome-automation.vercel.app             │
+│        /api/assessments/responses                              │
+│        (with bearer token authentication)                      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                       HTTP POST request
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 Assessment Service API                          │
+│                                                                 │
+│  4. Receive & Validate                                          │
+│     └─ Verify authentication and required fields               │
+│                                                                 │
+│  5. Transform & Score                                           │
+│     └─ Sum rankings per archetype, determine leading type      │
+│                                                                 │
+│  6. Store Response                                              │
+│     └─ Save raw data and calculated scores to database         │
+│                                                                 │
+│  7. Generate PDF Report                                         │
+│     └─ Create customized PDF with user info and radar chart    │
+│                                                                 │
+│  8. Send Email                                                  │
+│     └─ Attach PDF and deliver to user via Gmail               │
+│                                                                 │
+│  9. Error Handling                                              │
+│     └─ Log all errors to Sentry and alert on failures         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                          Gmail (via SMTP)
+                              │
+                              ▼
+                    User receives email
+                       with PDF report
+```
+
+### Why This Architecture?
+
+Make.com acts as the **trigger and delivery coordinator** — it waits for the survey response, then hands it off to your backend to handle all the complex logic: scoring, PDF generation, error handling, and database storage.
+
+**Benefits:**
+- **Separation of concerns**: Make handles integrations (SurveyMonkey ↔ your API); backend handles business logic
+- **Decoupled from SurveyMonkey**: If SurveyMonkey changes their API, you only update the Make workflow, not your code
+- **Scalable**: Backend can process assessments from multiple sources (not just SurveyMonkey)
+- **Observable**: Errors logged to Sentry; Make orchestration visible in Make's UI
+
+### Make Configuration
+
+The workflow is configured with:
+- **Authentication**: Bearer token (`real_epitome_bearer_token` secret)
+- **Headers**: `Content-Type: application/json`, `Authorization: Bearer <token>`
+- **Execution**: "Immediately as data arrives" — triggers the instant a SurveyMonkey response completes
 
 ## Core Concepts
 
@@ -33,6 +118,31 @@ Survey response processing, archetype calculation, and PDF report generation for
 - `src/epitome-assessment/archetype-label.ts` — The single `getArchetypeLabel()` used by both the API response and the PDF, so they can never disagree
 - `src/config/questions_map.json` — Maps each of the 12 survey questions to dimensions, and links each answer statement to its archetype (Sovereign, Empress, Consort, Seductress)
 
+## Repo Layout
+
+| Path | Purpose |
+|---|---|
+| `src/` | NestJS application source (controllers, services, config) |
+| `tests/` | Integration tests (real PDF generation) and Playwright e2e tests |
+| `CLAUDE.md` | Project rules for AI-assisted development |
+| `.ai/` | AI-assisted dev workflow scaffold (rules, skills, docs) |
+
+## Getting Started
+
+**Prerequisites:** Node.js, a Supabase project, Gmail app password, Sentry DSN (optional).
+
+1. Copy `.env.example` to `.env` and fill in `SUPABASE_URL`, `SUPABASE_API_KEY`, `EPITOME_AUTOMATION_SECRET`, `SENTRY_DSN`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `PORT`
+2. `npm install`
+3. `npm run start:dev` — runs the API locally with hot reload
+4. `npm test` — unit + integration tests
+5. `npm run test:e2e` — hits the live endpoint, Supabase, and Gmail (sends real emails to fixture addresses)
+
+## Credentials & Monitoring
+
+**Sentry Error Tracking:** All errors (auth failures, timeouts, connection issues, data validation) are automatically captured and sent to Sentry. You'll receive email alerts for any errors, so you don't need to manually monitor logs. Check your Sentry dashboard for error details tagged by phase (`email_auth_failure`, `report_generation`, `database_insert`, etc.).
+
+**Gmail App Password:** Google revokes app passwords if unused for 60 days. If email delivery stops, regenerate the app password in your Google Account security settings (`myaccount.google.com/apppasswords`), then update `GMAIL_APP_PASSWORD` in your deployment environment. Auth failures will appear in Sentry with tag `phase: email_auth_failure` and you'll receive an email alert.
+
 ## Database Schema
 
 The `survey_responses` table stores everything captured from a submission:
@@ -48,7 +158,7 @@ The `survey_responses` table stores everything captured from a submission:
 
 ## Data Integrity
 
-Reports are never generated from default or placeholder data. If a response is missing rankings, archetype scores, or anything else the chart or label needs, generation throws and no email is sent. See the Data Integrity rule in the root `CLAUDE.md`.
+Reports are never generated from default or placeholder data. If a response is missing rankings, archetype scores, or anything else the chart or label needs, generation throws and no email is sent. See the Data Integrity rule in `CLAUDE.md`.
 
 ## Tests
 
@@ -56,3 +166,7 @@ Reports are never generated from default or placeholder data. If a response is m
 - `tests/report-generation.spec.ts` — raw survey DTO → real PDF with `sharp` and `pdf-lib`, only Supabase stubbed
 - `tests/survey-submission.e2e.spec.ts` — hits the live endpoint, Supabase and Gmail; sends one email per fixture (`npm run test:e2e`)
 - `tests/fixtures/e2e-survey-response.ts` — the shared survey fixtures with their expected per-dimension rankings, totals and labels
+
+## Tech Stack
+
+NestJS · TypeScript · Supabase · Sentry · `pdf-lib` + `sharp` (PDF/image generation) · Jest + Playwright (testing)
