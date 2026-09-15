@@ -17,74 +17,17 @@ flowchart TD
 
 ## Make.com Automation Workflow
 
-The assessment automation is triggered and orchestrated by Make.com, which bridges SurveyMonkey responses to your backend processing and email delivery.
+The assessment automation is triggered and orchestrated by Make.com, which bridges SurveyMonkey responses to your backend. See the diagram above for the full flow: Make receives the webhook, extracts the response, and POSTs it to `/api/assessments/responses`. Your backend handles transform, scoring, storage, PDF generation, and email delivery.
 
-### Workflow Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Make.com (Orchestration)                   │
-│                                                                 │
-│  1. Survey Monkey Webhook                                      │
-│     └─ Triggers instantly when response is submitted           │
-│                                                                 │
-│  2. Get Response                                                │
-│     └─ Extracts full response data from SurveyMonkey          │
-│        (name, email, organization, all rankings)              │
-│                                                                 │
-│  3. HTTP POST to Backend                                        │
-│     └─ POST https://epitome-automation.vercel.app             │
-│        /api/assessments/responses                              │
-│        (with bearer token authentication)                      │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                       HTTP POST request
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                 Assessment Service API                          │
-│                                                                 │
-│  4. Receive & Validate                                          │
-│     └─ Verify authentication and required fields               │
-│                                                                 │
-│  5. Transform & Score                                           │
-│     └─ Sum rankings per archetype, determine leading type      │
-│                                                                 │
-│  6. Store Response                                              │
-│     └─ Save raw data and calculated scores to database         │
-│                                                                 │
-│  7. Generate PDF Report                                         │
-│     └─ Create customized PDF with user info and radar chart    │
-│                                                                 │
-│  8. Send Email                                                  │
-│     └─ Attach PDF and deliver to user via Gmail               │
-│                                                                 │
-│  9. Error Handling                                              │
-│     └─ Log all errors to Sentry and alert on failures         │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                          Gmail (via SMTP)
-                              │
-                              ▼
-                    User receives email
-                       with PDF report
-```
-
-### Why This Architecture?
-
-Make.com acts as the **trigger and delivery coordinator** — it waits for the survey response, then hands it off to your backend to handle all the complex logic: scoring, PDF generation, error handling, and database storage.
-
-**Benefits:**
+**Architecture highlights:**
 - **Separation of concerns**: Make handles integrations (SurveyMonkey ↔ your API); backend handles business logic
 - **Decoupled from SurveyMonkey**: If SurveyMonkey changes their API, you only update the Make workflow, not your code
 - **Scalable**: Backend can process assessments from multiple sources (not just SurveyMonkey)
-- **Observable**: Errors logged to Sentry; Make orchestration visible in Make's UI
 
-### Make Configuration
-
-The workflow is configured with:
+**Make configuration:**
 - **Authentication**: Bearer token (`real_epitome_bearer_token` secret)
 - **Headers**: `Content-Type: application/json`, `Authorization: Bearer <token>`
+- **Endpoint**: `POST https://epitome-automation.vercel.app/api/assessments/responses`
 - **Execution**: "Immediately as data arrives" — triggers the instant a SurveyMonkey response completes
 
 ## Core Concepts
