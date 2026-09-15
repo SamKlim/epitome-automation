@@ -8,3 +8,8 @@ build/
 *.log
 .cursor/
 .playwright-mcp/
+coverage/
+reports/
+playwright-report/
+test-results/
+test-output/

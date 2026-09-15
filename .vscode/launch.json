@@ -6,12 +6,12 @@
       "name": "Backend Dev",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/backend/node_modules/.bin/nest",
+      "program": "${workspaceFolder}/node_modules/.bin/nest",
       "args": ["start", "--watch"],
       "env": {
         "NODE_ENV": "development"
       },
-      "cwd": "${workspaceFolder}/backend",
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
     },
@@ -19,9 +19,9 @@
       "name": "Test End to End Flow",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/backend/node_modules/.bin/jest",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
       "args": ["--testPathPatterns=e2e", "--forceExit", "--runInBand"],
-      "cwd": "${workspaceFolder}/backend",
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "sourceMap": true,

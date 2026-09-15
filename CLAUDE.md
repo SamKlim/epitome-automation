@@ -34,7 +34,7 @@ Sending reports with incorrect data is worse than sending no report. Silent fall
 
 ## Architecture & Documentation
 
-For data flow, system architecture, services, and ranking logic, see [backend/README.md](backend/README.md).
+For data flow, system architecture, services, and ranking logic, see [README.md](README.md).
 
 ## Reference folder
 
