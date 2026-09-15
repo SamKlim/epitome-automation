@@ -15,21 +15,6 @@ flowchart TD
     C -.errors.-> H["Sentry<br/>error tracking"]
 ```
 
-## Make.com Automation Workflow
-
-The assessment automation is triggered and orchestrated by Make.com, which bridges SurveyMonkey responses to your backend. See the diagram above for the full flow: Make receives the webhook, extracts the response, and POSTs it to `/api/assessments/responses`. Your backend handles transform, scoring, storage, PDF generation, and email delivery.
-
-**Architecture highlights:**
-- **Separation of concerns**: Make handles integrations (SurveyMonkey ↔ your API); backend handles business logic
-- **Decoupled from SurveyMonkey**: If SurveyMonkey changes their API, you only update the Make workflow, not your code
-- **Scalable**: Backend can process assessments from multiple sources (not just SurveyMonkey)
-
-**Make configuration:**
-- **Authentication**: Bearer token (`real_epitome_bearer_token` secret)
-- **Headers**: `Content-Type: application/json`, `Authorization: Bearer <token>`
-- **Endpoint**: `POST https://epitome-automation.vercel.app/api/assessments/responses`
-- **Execution**: "Immediately as data arrives" — triggers the instant a SurveyMonkey response completes
-
 ## Core Concepts
 
 ### Survey Ranking System
@@ -65,8 +50,9 @@ The assessment automation is triggered and orchestrated by Make.com, which bridg
 
 | Path | Purpose |
 |---|---|
-| `src/` | NestJS application source (controllers, services, config) |
+| `src/` | NestJS application source (controllers, services, database, config) |
 | `tests/` | Integration tests (real PDF generation) and Playwright e2e tests |
+| `eslint.config.mjs`, `playwright.config.ts`, `.prettierrc` | Tooling configuration at project root |
 | `CLAUDE.md` | Project rules for AI-assisted development |
 | `.ai/` | AI-assisted dev workflow scaffold (rules, skills, docs) |
 
