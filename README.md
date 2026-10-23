@@ -60,7 +60,7 @@ flowchart TD
 
 **Prerequisites:** Node.js, a Supabase project, Gmail app password, Sentry DSN (optional).
 
-1. Copy `.env.example` to `.env` and fill in `SUPABASE_URL`, `SUPABASE_API_KEY`, `EPITOME_AUTOMATION_SECRET`, `SENTRY_DSN`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `PORT`
+1. Copy `.env.example` to `.env` and fill in `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EPITOME_AUTOMATION_SECRET`, `SENTRY_DSN`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `PORT`
 2. `npm install`
 3. `npm run start:dev` — runs the API locally with hot reload
 4. `npm test` — unit + integration tests

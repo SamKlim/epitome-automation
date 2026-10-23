@@ -33,4 +33,4 @@ Should return `{"status":"ok","message":"Epitome Assessment API is running"}`
 
 ## Gotchas
 - response_id must be unique (primary key in Supabase)
-- If server fails to start, check Supabase URL + ANON_KEY in .env
+- If server fails to start, check Supabase URL + SUPABASE_SERVICE_ROLE_KEY in .env

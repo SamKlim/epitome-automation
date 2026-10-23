@@ -7,11 +7,11 @@ export class SupabaseService {
 
   constructor() {
     const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_ANON_KEY;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!url || !key) {
       throw new Error(
-        'Missing required environment variables: SUPABASE_URL and SUPABASE_ANON_KEY',
+        'Missing required environment variables: SUPABASE_URL OR SUPABASE_SERVICE_ROLE_KEY',
       );
     }
 
