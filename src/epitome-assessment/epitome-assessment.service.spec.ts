@@ -2,6 +2,14 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { Logger } from '@nestjs/common';
+import * as Sentry from '@sentry/node';
+
+jest.mock('@sentry/node', () => ({
+  addBreadcrumb: jest.fn(),
+  captureMessage: jest.fn(),
+  captureException: jest.fn(),
+}));
+
 import { EpitomeAssessmentService } from './epitome-assessment.service';
 import { EpitomeReportGeneratorService } from './epitome-report-generator.service';
 import { SupabaseService } from '../db-supabase/supabase.service';
@@ -77,6 +85,26 @@ describe('EpitomeAssessmentService email delivery', () => {
       to: 'samanthaklimovski@gmail.com',
       attachments: [{ path: reportPath }],
     });
+  });
+
+  it('captures a hashed email-sent Sentry event when Gmail accepts', async () => {
+    sendMail.mockResolvedValue({ messageId: '<abc@gmail>', accepted: ['samanthaklimovski@gmail.com'] });
+
+    await service.processResponse(FIXTURE_ONE.buildResponse());
+
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'Email sent to recipient',
+      expect.objectContaining({
+        level: 'info',
+        tags: expect.objectContaining({ phase: 'email_send_success' }),
+        contexts: expect.objectContaining({
+          email: expect.objectContaining({
+            recipient_email: 'samanthaklimovski@gmail.com',
+            recipient_domain: 'gmail.com',
+          }),
+        }),
+      }),
+    );
   });
 
   it('does not retry when Gmail rejects the credentials, and says what to check', async () => {

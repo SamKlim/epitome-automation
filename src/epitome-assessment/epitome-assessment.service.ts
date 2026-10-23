@@ -257,25 +257,46 @@ export class EpitomeAssessmentService {
         data: { response_id: responseId, recipient: email, attempt },
       });
       try {
-        await this.sendEmailReport(email, firstName, lastName, reportPath);
+        const messageId = await this.sendEmailReport(email, firstName, lastName, reportPath);
         Sentry.addBreadcrumb({
           message: 'Email sent successfully',
           level: 'info',
-          data: { response_id: responseId, recipient: email },
+          data: {
+            response_id: responseId,
+            recipient_email: email,
+            recipient_domain: this.getEmailDomain(email),
+            message_id: messageId,
+          },
+        });
+        Sentry.captureMessage('Email sent to recipient', {
+          level: 'info',
+          tags: { phase: 'email_send_success' },
+          contexts: {
+            response: { response_id: responseId },
+            email: {
+              recipient_email: email,
+              recipient_domain: this.getEmailDomain(email),
+              provider: 'gmail',
+              attempt,
+              message_id: messageId,
+            },
+          },
         });
         return true;
       } catch (error) {
         const failure = classifySmtpError(error);
-        this.logger.error(`[${responseId}] ${describeSmtpFailure(failure, process.env.GMAIL_USER)}`);
+        const emailFailureMessage = describeSmtpFailure(failure, process.env.GMAIL_USER);
+        this.logger.error(`[${responseId}] ${emailFailureMessage}`);
         Sentry.addBreadcrumb({
           message: `Email send failed: ${failure.kind}`,
           level: 'warning',
           data: {
             response_id: responseId,
-            recipient: email,
+            recipient_email: email,
+            recipient_domain: this.getEmailDomain(email),
             attempt,
             error_kind: failure.kind,
-            error_details: describeSmtpFailure(failure, process.env.GMAIL_USER),
+            error_details: emailFailureMessage,
           },
         });
 
@@ -284,7 +305,20 @@ export class EpitomeAssessmentService {
           Sentry.captureMessage('Email auth failure - aborting retries', {
             level: 'error',
             tags: { phase: 'email_auth_failure' },
-            contexts: { response: { response_id: responseId } },
+            contexts: {
+              response: { response_id: responseId },
+              email: {
+                recipient_email: email,
+                recipient_domain: this.getEmailDomain(email),
+                provider: 'gmail',
+                attempt,
+              },
+              smtp: {
+                code: failure.code,
+                response_code: failure.responseCode,
+                retryable: false,
+              },
+            },
           });
           return false;
         }
@@ -299,9 +333,22 @@ export class EpitomeAssessmentService {
     Sentry.captureMessage('Email delivery failed after all retries', {
       level: 'error',
       tags: { phase: 'email_final_failure' },
-      contexts: { response: { response_id: responseId, recipient: email } },
+      contexts: {
+        response: { response_id: responseId },
+        email: {
+          recipient_email: email,
+          recipient_domain: this.getEmailDomain(email),
+          provider: 'gmail',
+          attempts: EMAIL_MAX_ATTEMPTS,
+        },
+      },
     });
     return false;
+  }
+
+  private getEmailDomain(email: string): string {
+    const atIndex = email.lastIndexOf('@');
+    return atIndex >= 0 ? email.slice(atIndex + 1).toLowerCase() : 'unknown';
   }
 
   private delay(ms: number): Promise<void> {
@@ -313,7 +360,7 @@ export class EpitomeAssessmentService {
     firstName: string,
     lastName: string,
     reportPath: string,
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     const gmailUser = process.env.GMAIL_USER;
     const gmailPassword = process.env.GMAIL_APP_PASSWORD;
     this.logger.log(
@@ -343,6 +390,7 @@ export class EpitomeAssessmentService {
     this.logger.log(
       `Gmail accepted message ${info.messageId} for ${info.accepted?.join(', ') ?? email}`,
     );
+    return info.messageId;
   }
 }
 
